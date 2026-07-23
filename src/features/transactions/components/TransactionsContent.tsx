@@ -94,18 +94,20 @@ export function TransactionsContent() {
         </div>
 
         {/* Search & Filters */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <TransactionSearch
-            value={filters.search}
-            onChange={handleSearchChange}
-            count={totalCount}
-          />
-          <TransactionFilters
-            filters={filters}
-            onUpdate={updateFilter}
-            onReset={resetFilters}
-            hasActive={hasActiveFilters}
-          />
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3">
+            <TransactionSearch
+              value={filters.search}
+              onChange={handleSearchChange}
+              count={totalCount}
+            />
+            <TransactionFilters
+              filters={filters}
+              onUpdate={updateFilter}
+              onReset={resetFilters}
+              hasActive={hasActiveFilters}
+            />
+          </div>
         </div>
 
         {/* Table */}
