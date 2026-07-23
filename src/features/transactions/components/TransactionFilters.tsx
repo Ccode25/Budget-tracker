@@ -12,8 +12,6 @@ interface TransactionFiltersProps {
   onUpdate: <K extends keyof TransactionFilters>(k: K, v: TransactionFilters[K]) => void;
   onReset: () => void;
   hasActive: boolean;
-  isOpen?: boolean;
-  onToggleOpen?: () => void;
 }
 
 const TYPES: { label: string; value: TransactionType }[] = [
@@ -30,6 +28,50 @@ const STATUSES: { label: string; value: TransactionStatus }[] = [
 
 function toggleArrayItem<T>(arr: T[], item: T): T[] {
   return arr.includes(item) ? arr.filter((x) => x !== item) : [...arr, item];
+}
+
+export function TransactionFiltersButton({
+  open,
+  onToggle,
+  onReset,
+  hasActive,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onReset: () => void;
+  hasActive: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-2 shrink-0">
+      <Button
+        variant="outline"
+        size="sm"
+        className={cn("gap-2", open && "bg-muted")}
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls="filter-panel"
+      >
+        <Filter size={14} aria-hidden />
+        Filters
+        {hasActive && (
+          <Badge className="h-4 w-4 rounded-full p-0 flex items-center justify-center text-[9px] font-bold bg-primary text-primary-foreground">
+            !
+          </Badge>
+        )}
+        <ChevronDown
+          size={12}
+          className={cn("transition-transform duration-200", open && "rotate-180")}
+          aria-hidden
+        />
+      </Button>
+
+      {hasActive && (
+        <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={onReset}>
+          <X size={12} aria-hidden /> Clear
+        </Button>
+      )}
+    </div>
+  );
 }
 
 export function TransactionFilterPanel({
@@ -133,45 +175,17 @@ export function TransactionFilters({
   onReset,
   hasActive,
 }: TransactionFiltersProps) {
-  const [internalOpen, setInternalOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
   return (
-    <div className="w-full sm:w-auto">
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className={cn("gap-2", internalOpen && "bg-muted")}
-          onClick={() => setInternalOpen((v) => !v)}
-          aria-expanded={internalOpen}
-          aria-controls="filter-panel"
-        >
-          <Filter size={14} aria-hidden />
-          Filters
-          {hasActive && (
-            <Badge className="h-4 w-4 rounded-full p-0 flex items-center justify-center text-[9px] font-bold bg-primary text-primary-foreground">
-              !
-            </Badge>
-          )}
-          <ChevronDown
-            size={12}
-            className={cn("transition-transform duration-200", internalOpen && "rotate-180")}
-            aria-hidden
-          />
-        </Button>
-
-        {hasActive && (
-          <Button variant="ghost" size="sm" className="h-8 gap-1 text-xs text-muted-foreground hover:text-foreground" onClick={onReset}>
-            <X size={12} aria-hidden /> Clear filters
-          </Button>
-        )}
-      </div>
-
-      {internalOpen && (
-        <div className="mt-3 w-full sm:w-[480px]">
-          <TransactionFilterPanel filters={filters} onUpdate={onUpdate} />
-        </div>
-      )}
+    <div className="w-full space-y-3">
+      <TransactionFiltersButton
+        open={open}
+        onToggle={() => setOpen((v) => !v)}
+        onReset={onReset}
+        hasActive={hasActive}
+      />
+      {open && <TransactionFilterPanel filters={filters} onUpdate={onUpdate} />}
     </div>
   );
 }

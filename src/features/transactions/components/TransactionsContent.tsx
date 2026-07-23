@@ -8,7 +8,7 @@ import { Container } from "@/components/layout/Container";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { useTransactions } from "../hooks/useTransactions";
 import { TransactionSearch } from "./TransactionSearch";
-import { TransactionFilters } from "./TransactionFilters";
+import { TransactionFiltersButton, TransactionFilterPanel } from "./TransactionFilters";
 import { TransactionTable } from "./TransactionTable";
 import { Pagination } from "./Pagination";
 import { TransactionForm } from "./TransactionForm";
@@ -38,6 +38,7 @@ export function TransactionsContent() {
   } = useTransactions();
 
   const [formOpen, setFormOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const handleOpenAdd = () => {
@@ -93,21 +94,28 @@ export function TransactionsContent() {
           </div>
         </div>
 
-        {/* Search & Filters */}
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-start gap-3">
+        {/* Search & Filters Toolbar */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <TransactionSearch
               value={filters.search}
               onChange={handleSearchChange}
               count={totalCount}
             />
-            <TransactionFilters
-              filters={filters}
-              onUpdate={updateFilter}
+            <TransactionFiltersButton
+              open={filterOpen}
+              onToggle={() => setFilterOpen((v) => !v)}
               onReset={resetFilters}
               hasActive={hasActiveFilters}
             />
           </div>
+
+          {filterOpen && (
+            <TransactionFilterPanel
+              filters={filters}
+              onUpdate={updateFilter}
+            />
+          )}
         </div>
 
         {/* Table */}
