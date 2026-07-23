@@ -28,7 +28,7 @@ export function PublicFooter() {
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">Resources</h3>
             <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
-              <li><Link href="/dashboard" className="hover:text-foreground">Demo Dashboard</Link></li>
+              <li><Link href="/dashboard?demo=true" className="hover:text-foreground">Demo Dashboard</Link></li>
               <li><Link href="/login" className="hover:text-foreground">Account Login</Link></li>
               <li><Link href="/register" className="hover:text-foreground">Create Account</Link></li>
             </ul>

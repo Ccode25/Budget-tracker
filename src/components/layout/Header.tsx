@@ -20,6 +20,7 @@ interface UserSession {
   email: string;
   avatarUrl?: string;
   role?: string;
+  isDemo?: boolean;
 }
 
 export function Header({ title, className }: HeaderProps) {
@@ -123,6 +124,13 @@ export function Header({ title, className }: HeaderProps) {
 
         {/* Divider */}
         <div className="mx-1 h-6 w-px bg-border" aria-hidden />
+
+        {/* Demo Mode Badge */}
+        {user?.isDemo && (
+          <Badge variant="outline" className="hidden sm:inline-flex bg-amber-500/10 text-amber-500 border-amber-500/20 text-[10px] font-bold uppercase tracking-wider">
+            Demo Mode
+          </Badge>
+        )}
 
         {/* User Profile Menu */}
         <div className="relative">

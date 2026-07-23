@@ -31,7 +31,7 @@ export function HeroSection() {
                 Start Free Today <ArrowRight className="h-4 w-4" />
               </Button>
             </Link>
-            <Link href="/dashboard" className="w-full sm:w-auto">
+            <Link href="/dashboard?demo=true" className="w-full sm:w-auto">
               <Button variant="outline" size="lg" className="w-full sm:w-auto h-12 px-6">
                 Explore Live Demo
               </Button>

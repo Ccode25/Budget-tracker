@@ -32,7 +32,7 @@ export function CTASection() {
                   Get Started Free <ArrowRight className="h-4 w-4 ml-1" />
                 </Button>
               </Link>
-              <Link href="/dashboard">
+              <Link href="/dashboard?demo=true">
                 <Button size="lg" variant="outline" className="h-12 px-6 bg-white/10 hover:bg-white/20 border-white/30 text-white">
                   Launch Demo
                 </Button>

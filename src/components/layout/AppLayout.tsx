@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
 import { MobileNav } from "./MobileNav";
 import { Footer } from "./Footer";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { DEMO_TRANSACTIONS } from "@/features/transactions/mock/transactions";
 import { cn } from "@/lib/utils";
 
 interface AppLayoutProps {
@@ -14,6 +15,42 @@ interface AppLayoutProps {
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const isDemoQuery = params.get("demo") === "true";
+      const storedUser = window.localStorage.getItem("budget_tracker_user");
+
+      if (isDemoQuery) {
+        // Initialize Demo Mode Session with rich sample data
+        window.localStorage.setItem(
+          "budget_tracker_user",
+          JSON.stringify({
+            id: "usr-demo",
+            name: "Demo User",
+            email: "demo@example.com",
+            isDemo: true,
+          })
+        );
+        window.localStorage.setItem("budget_tracker_transactions", JSON.stringify(DEMO_TRANSACTIONS));
+      } else if (!storedUser) {
+        // Default guest session to Demo Mode
+        window.localStorage.setItem(
+          "budget_tracker_user",
+          JSON.stringify({
+            id: "usr-demo",
+            name: "Demo User",
+            email: "demo@example.com",
+            isDemo: true,
+          })
+        );
+        if (!window.localStorage.getItem("budget_tracker_transactions")) {
+          window.localStorage.setItem("budget_tracker_transactions", JSON.stringify(DEMO_TRANSACTIONS));
+        }
+      }
+    }
+  }, []);
 
   return (
     <TooltipProvider>
