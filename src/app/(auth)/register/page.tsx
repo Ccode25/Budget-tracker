@@ -23,12 +23,13 @@ export default function RegisterPage() {
 
       const body = await res.json();
       if (!res.ok) {
-        throw new Error(body.error || "Registration failed");
+        throw new Error(body.message || body.error || "Registration failed");
       }
 
       if (typeof window !== "undefined") {
         window.localStorage.setItem("budget_tracker_user", JSON.stringify(body.user));
         window.localStorage.setItem("budget_tracker_token", body.accessToken);
+        window.localStorage.removeItem("budget_tracker_transactions"); // clear mock transactions for new real user
       }
       router.push("/dashboard");
     } catch (err: any) {

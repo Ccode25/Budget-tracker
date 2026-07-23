@@ -23,12 +23,13 @@ export default function LoginPage() {
 
       const body = await res.json();
       if (!res.ok) {
-        throw new Error(body.error || "Invalid credentials");
+        throw new Error(body.message || body.error || "Invalid email or password.");
       }
 
       if (typeof window !== "undefined") {
         window.localStorage.setItem("budget_tracker_user", JSON.stringify(body.user));
         window.localStorage.setItem("budget_tracker_token", body.accessToken);
+        window.localStorage.removeItem("budget_tracker_transactions"); // clear mock transactions for fresh account session
       }
       router.push("/dashboard");
     } catch (err: any) {
