@@ -3,20 +3,54 @@
 import { useState, useMemo } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { MOCK_BUDGETS } from "../mock/budgets";
-import { MOCK_TRANSACTIONS } from "@/features/transactions/mock/transactions";
 import { getCategoryName, getCategoryColor } from "@/features/categories/mock/categories";
 import type { Budget } from "@/types/budget";
 import type { Transaction } from "@/types/transaction";
 
+function getInitialBudgets(): Budget[] {
+  if (typeof window === "undefined") return [];
+
+  const storedBudgets = window.localStorage.getItem("budget_tracker_budgets");
+  if (storedBudgets) {
+    try {
+      return JSON.parse(storedBudgets);
+    } catch {
+      // Fallback
+    }
+  }
+
+  const storedUserStr = window.localStorage.getItem("budget_tracker_user");
+  if (storedUserStr) {
+    try {
+      const u = JSON.parse(storedUserStr);
+      if (u?.isDemo) return MOCK_BUDGETS;
+    } catch {
+      // Fallback
+    }
+  }
+
+  // Real logged-in user starts with empty budgets list []
+  return [];
+}
+
 export function useBudgets() {
   const [transactions] = useLocalStorage<Transaction[]>(
     "budget_tracker_transactions",
-    MOCK_TRANSACTIONS
+    []
   );
-  const [budgets, setBudgets] = useLocalStorage<Budget[]>(
-    "budget_tracker_budgets",
-    MOCK_BUDGETS
-  );
+  const [budgets, setBudgets] = useState<Budget[]>(getInitialBudgets);
+
+  // Sync to localStorage
+  const updateBudgetsState = (newBudgets: Budget[] | ((prev: Budget[]) => Budget[])) => {
+    setBudgets((prev) => {
+      const next = typeof newBudgets === "function" ? newBudgets(prev) : newBudgets;
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("budget_tracker_budgets", JSON.stringify(next));
+      }
+      return next;
+    });
+  };
+
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   // Compute category spending from transactions for current month
@@ -52,15 +86,15 @@ export function useBudgets() {
       ...budget,
       id: `bgt-${Date.now()}`,
     };
-    setBudgets((prev) => [newBgt, ...prev]);
+    updateBudgetsState((prev) => [newBgt, ...prev]);
   };
 
   const updateBudget = (id: string, updates: Partial<Budget>) => {
-    setBudgets((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)));
+    updateBudgetsState((prev) => prev.map((b) => (b.id === id ? { ...b, ...updates } : b)));
   };
 
   const deleteBudget = (id: string) => {
-    setBudgets((prev) => prev.filter((b) => b.id !== id));
+    updateBudgetsState((prev) => prev.filter((b) => b.id !== id));
   };
 
   const getEnrichedBudget = (id: string) => {
@@ -92,4 +126,3 @@ export function useBudgets() {
     getEnrichedBudget,
   };
 }
-

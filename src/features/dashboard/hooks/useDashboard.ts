@@ -99,7 +99,29 @@ export function useDashboard() {
       }
     }
 
-    const activeBudget = MOCK_BUDGETS.find((b) => b.id === "bgt-001");
+    let userBudgets: typeof MOCK_BUDGETS = [];
+    if (typeof window !== "undefined") {
+      const storedBudgets = window.localStorage.getItem("budget_tracker_budgets");
+      if (storedBudgets) {
+        try {
+          userBudgets = JSON.parse(storedBudgets);
+        } catch {
+          userBudgets = [];
+        }
+      } else {
+        const storedUserStr = window.localStorage.getItem("budget_tracker_user");
+        if (storedUserStr) {
+          try {
+            const u = JSON.parse(storedUserStr);
+            if (u?.isDemo) userBudgets = MOCK_BUDGETS;
+          } catch {
+            userBudgets = [];
+          }
+        }
+      }
+    }
+
+    const activeBudget = userBudgets.find((b) => b.isActive) || userBudgets[0] || null;
     let calculatedTotalSpent = 0;
     const budgetCategories = (activeBudget?.categories ?? []).map((c) => {
       const actualSpent = categorySpentMap[c.categoryId] ?? 0;
