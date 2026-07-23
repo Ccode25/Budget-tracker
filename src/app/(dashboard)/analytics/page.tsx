@@ -3,7 +3,7 @@ import { AnalyticsContent } from "@/features/analytics/components/AnalyticsConte
 
 export const metadata: Metadata = {
   title: "Analytics — BudgetTracker",
-  description: "Deep dive into your financial trends and category spending.",
+  description: "Visual insights, cash flow trends, and category breakdown charts.",
 };
 
 export default function AnalyticsPage() {

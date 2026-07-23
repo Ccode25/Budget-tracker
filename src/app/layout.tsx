@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
-import { AppLayout } from "@/components/layout/AppLayout";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
@@ -13,7 +12,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "BudgetTracker — Your Financial Dashboard",
+    default: "BudgetTracker — Modern Personal Finance & Budget Planning",
     template: "%s | BudgetTracker",
   },
   description:
@@ -44,9 +43,7 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <AppLayout>
-            {children}
-          </AppLayout>
+          {children}
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

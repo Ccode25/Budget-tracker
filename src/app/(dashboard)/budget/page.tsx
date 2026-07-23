@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { BudgetContent } from "@/features/budgets/components/BudgetContent";
 
 export const metadata: Metadata = {
-  title: "Budget — BudgetTracker",
-  description: "Set, track, and manage your spending limits.",
+  title: "Budgets — BudgetTracker",
+  description: "Set, monitor, and manage your monthly category budget limits.",
 };
 
 export default function BudgetPage() {

@@ -3,7 +3,7 @@ import { CategoriesContent } from "@/features/categories/components/CategoriesCo
 
 export const metadata: Metadata = {
   title: "Categories — BudgetTracker",
-  description: "Manage your income and expense categories.",
+  description: "Manage income and expense categories.",
 };
 
 export default function CategoriesPage() {
