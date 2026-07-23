@@ -81,17 +81,22 @@ function getInitialGoals(): GoalItem[] {
 }
 
 export function GoalsContent() {
+  const [mounted, setMounted] = useState(false);
   const [goals, setGoals] = useState<GoalItem[]>(getInitialGoals);
   const [filter, setFilter] = useState<"all" | "in-progress" | "completed">("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<GoalItem | null>(null);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Sync to localStorage
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && mounted) {
       window.localStorage.setItem("budget_tracker_goals", JSON.stringify(goals));
     }
-  }, [goals]);
+  }, [goals, mounted]);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -105,13 +110,15 @@ export function GoalsContent() {
   const [depositGoalId, setDepositGoalId] = useState<string | null>(null);
   const [depositAmount, setDepositAmount] = useState("");
 
-  // Stats
-  const totalTarget = goals.reduce((acc, g) => acc + g.target, 0);
-  const totalSaved = goals.reduce((acc, g) => acc + g.saved, 0);
-  const overallPercentage = totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0;
-  const completedCount = goals.filter((g) => g.saved >= g.target).length;
+  const displayGoals = mounted ? goals : [];
 
-  const filteredGoals = goals.filter((g) => {
+  // Stats
+  const totalTarget = displayGoals.reduce((acc, g) => acc + g.target, 0);
+  const totalSaved = displayGoals.reduce((acc, g) => acc + g.saved, 0);
+  const overallPercentage = totalTarget > 0 ? Math.round((totalSaved / totalTarget) * 100) : 0;
+  const completedCount = displayGoals.filter((g) => g.saved >= g.target).length;
+
+  const filteredGoals = displayGoals.filter((g) => {
     if (filter === "completed") return g.saved >= g.target;
     if (filter === "in-progress") return g.saved < g.target;
     return true;
@@ -220,7 +227,7 @@ export function GoalsContent() {
               <Target size={16} className="text-primary" />
             </div>
             <p className="text-2xl font-bold text-foreground">₱{totalTarget.toLocaleString()}</p>
-            <p className="text-xs text-muted-foreground">{goals.length} total active targets</p>
+            <p className="text-xs text-muted-foreground">{displayGoals.length} total active targets</p>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-4 shadow-sm space-y-1">
@@ -247,7 +254,7 @@ export function GoalsContent() {
               <CheckCircle2 size={16} className="text-violet-500" />
             </div>
             <p className="text-2xl font-bold text-foreground">{completedCount} Goals</p>
-            <p className="text-xs text-muted-foreground">{goals.length - completedCount} in progress</p>
+            <p className="text-xs text-muted-foreground">{displayGoals.length - completedCount} in progress</p>
           </div>
         </div>
 
@@ -272,7 +279,7 @@ export function GoalsContent() {
           </div>
 
           <span className="text-xs text-muted-foreground">
-            Showing {filteredGoals.length} of {goals.length} goals
+            Showing {filteredGoals.length} of {displayGoals.length} goals
           </span>
         </div>
 

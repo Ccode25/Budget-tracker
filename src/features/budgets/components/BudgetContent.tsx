@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, PiggyBank } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/Container";
@@ -13,12 +13,18 @@ import { Progress } from "@/components/ui/progress";
 import type { Budget } from "@/types/budget";
 
 export function BudgetContent() {
+  const [mounted, setMounted] = useState(false);
   const { activeBudgets, addBudget, updateBudget, deleteBudget, setSelectedId } = useBudgets();
   const [formOpen, setFormOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 
-  const totalLimit = activeBudgets.reduce((s, b) => s + b.totalLimit, 0);
-  const totalSpent = activeBudgets.reduce((s, b) => s + b.totalSpent, 0);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const displayBudgets = mounted ? activeBudgets : [];
+  const totalLimit = displayBudgets.reduce((s, b) => s + b.totalLimit, 0);
+  const totalSpent = displayBudgets.reduce((s, b) => s + b.totalSpent, 0);
   const totalPct = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
 
   const handleOpenAdd = () => {
@@ -71,7 +77,7 @@ export function BudgetContent() {
               className="h-2 bg-primary-foreground/20 [&>div]:bg-primary-foreground"
             />
             <p className="text-xs opacity-70">
-              {totalPct}% of total budget used across {activeBudgets.length} active plans.
+              {totalPct}% of total budget used across {displayBudgets.length} active plans.
             </p>
           </CardContent>
         </Card>
@@ -79,7 +85,7 @@ export function BudgetContent() {
         {/* Active Budgets List */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Active Plans</h2>
-          {activeBudgets.length === 0 ? (
+          {displayBudgets.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border bg-card/40 p-12 text-center space-y-3">
               <PiggyBank size={32} className="mx-auto text-muted-foreground" />
               <h3 className="text-base font-semibold text-foreground">No budgets found</h3>
@@ -92,7 +98,7 @@ export function BudgetContent() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {activeBudgets.map((b) => (
+              {displayBudgets.map((b) => (
                 <BudgetCard
                   key={b.id}
                   budget={b}
