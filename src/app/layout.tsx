@@ -41,7 +41,7 @@ export default function RootLayout({
       data-scroll-behavior="smooth"
       suppressHydrationWarning
     >
-      <body>
+      <body className={`${inter.className} ${inter.variable}`}>
         <ThemeProvider>
           {children}
           <Toaster richColors position="top-right" />
