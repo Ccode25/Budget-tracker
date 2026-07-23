@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Target,
@@ -52,11 +52,46 @@ const COLOR_OPTIONS = [
   "#6366f1", // Indigo
 ];
 
+function getInitialGoals(): GoalItem[] {
+  if (typeof window === "undefined") return [];
+
+  const storedGoals = window.localStorage.getItem("budget_tracker_goals");
+  if (storedGoals) {
+    try {
+      return JSON.parse(storedGoals);
+    } catch {
+      // Fallback
+    }
+  }
+
+  const storedUserStr = window.localStorage.getItem("budget_tracker_user");
+  if (storedUserStr) {
+    try {
+      const user = JSON.parse(storedUserStr);
+      if (user?.isDemo) {
+        return SAVINGS_GOALS;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  // Real logged in users start with empty goals list
+  return [];
+}
+
 export function GoalsContent() {
-  const [goals, setGoals] = useState<GoalItem[]>(SAVINGS_GOALS);
+  const [goals, setGoals] = useState<GoalItem[]>(getInitialGoals);
   const [filter, setFilter] = useState<"all" | "in-progress" | "completed">("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<GoalItem | null>(null);
+
+  // Sync to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("budget_tracker_goals", JSON.stringify(goals));
+    }
+  }, [goals]);
 
   // Form state
   const [formName, setFormName] = useState("");

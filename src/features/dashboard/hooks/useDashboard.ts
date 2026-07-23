@@ -120,6 +120,28 @@ export function useDashboard() {
         }
       : null;
 
+    let userGoals: typeof SAVINGS_GOALS = [];
+    if (typeof window !== "undefined") {
+      const storedGoals = window.localStorage.getItem("budget_tracker_goals");
+      if (storedGoals) {
+        try {
+          userGoals = JSON.parse(storedGoals);
+        } catch {
+          userGoals = [];
+        }
+      } else {
+        const storedUserStr = window.localStorage.getItem("budget_tracker_user");
+        if (storedUserStr) {
+          try {
+            const u = JSON.parse(storedUserStr);
+            if (u?.isDemo) userGoals = SAVINGS_GOALS;
+          } catch {
+            userGoals = [];
+          }
+        }
+      }
+    }
+
     return {
       currentBalance,
       income,
@@ -131,7 +153,7 @@ export function useDashboard() {
       recentTransactions,
       budgetCategories,
       activeBudget: dynamicActiveBudget,
-      goals: SAVINGS_GOALS,
+      goals: userGoals,
     };
   }, [allTransactions]);
 }
