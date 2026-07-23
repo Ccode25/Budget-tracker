@@ -4,7 +4,6 @@ import { useState } from "react";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { useRouter } from "next/navigation";
-import { authService } from "@/features/auth/services/auth.service";
 import type { LoginInput } from "@/features/auth/validation/auth.validation";
 
 export default function LoginPage() {
@@ -16,10 +15,20 @@ export default function LoginPage() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const res = await authService.login(data);
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      const body = await res.json();
+      if (!res.ok) {
+        throw new Error(body.error || "Invalid credentials");
+      }
+
       if (typeof window !== "undefined") {
-        window.localStorage.setItem("budget_tracker_user", JSON.stringify(res.user));
-        window.localStorage.setItem("budget_tracker_token", res.accessToken);
+        window.localStorage.setItem("budget_tracker_user", JSON.stringify(body.user));
+        window.localStorage.setItem("budget_tracker_token", body.accessToken);
       }
       router.push("/dashboard");
     } catch (err: any) {
