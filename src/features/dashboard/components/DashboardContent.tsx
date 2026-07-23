@@ -36,15 +36,26 @@ export function DashboardContent() {
   return (
     <PageWrapper>
       <Container className="py-6 space-y-8">
-        {/* Greeting */}
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">
-            Good afternoon 👋
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Here&apos;s your financial overview for July 2026.
-          </p>
+        {/* Greeting & Onboarding Banner */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Good day 👋
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Here&apos;s your financial overview for July 2026.
+            </p>
+          </div>
         </div>
+
+        {recentTransactions.length === 0 && (
+          <div className="rounded-2xl border border-primary/20 bg-primary/5 p-6 backdrop-blur-md">
+            <h2 className="text-base font-bold text-foreground">Welcome to BudgetTracker! 🎉</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              You are signed in with a clean account. Get started by adding your first transaction or importing a bank statement.
+            </p>
+          </div>
+        )}
 
         {/* Quick Actions */}
         <QuickActions />

@@ -85,11 +85,15 @@ export function GoalsCard({ goals }: GoalsCardProps) {
 
       <div className="divide-y divide-border">
         {displayed.map((goal, i) => {
-          const pct = Math.round((goal.saved / goal.target) * 100);
-          const deadline = new Date(goal.deadline).toLocaleDateString("en-US", {
-            month: "short",
-            year: "numeric",
-          });
+          const savedVal = typeof goal.saved === "number" ? goal.saved : parseFloat((goal.saved as any) || 0) || 0;
+          const targetVal = typeof goal.target === "number" ? goal.target : parseFloat((goal.target as any) || 0) || 0;
+          const pct = targetVal > 0 ? Math.round((savedVal / targetVal) * 100) : 0;
+          const deadline = goal.deadline
+            ? new Date(goal.deadline).toLocaleDateString("en-US", {
+                month: "short",
+                year: "numeric",
+              })
+            : "N/A";
 
           return (
             <motion.div
@@ -99,12 +103,12 @@ export function GoalsCard({ goals }: GoalsCardProps) {
               transition={{ delay: i * 0.08 }}
               className="flex items-center gap-4 px-5 py-4"
             >
-              <CircularProgress pct={pct} color={goal.color} />
+              <CircularProgress pct={pct} color={goal.color || "#10b981"} />
 
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-foreground">{goal.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  ₱{goal.saved.toLocaleString()} of ₱{goal.target.toLocaleString()}
+                  ₱{savedVal.toLocaleString()} of ₱{targetVal.toLocaleString()}
                 </p>
                 <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
                   <Calendar size={10} aria-hidden />
@@ -114,7 +118,7 @@ export function GoalsCard({ goals }: GoalsCardProps) {
 
               <div className="text-right shrink-0">
                 <p className="text-sm font-semibold text-foreground">
-                  ₱{(goal.target - goal.saved).toLocaleString()}
+                  ₱{Math.max(0, targetVal - savedVal).toLocaleString()}
                 </p>
                 <p className="text-xs text-muted-foreground">to go</p>
               </div>

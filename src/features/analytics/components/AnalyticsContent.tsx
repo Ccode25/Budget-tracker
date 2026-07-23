@@ -66,23 +66,44 @@ export function AnalyticsContent() {
           </Card>
         </div>
 
+        {monthlyTrends.length === 0 && categoryBreakdown.length === 0 && (
+          <div className="rounded-2xl border border-border bg-card/60 p-8 text-center backdrop-blur-md">
+            <h3 className="text-base font-bold text-foreground">No Analytics Data Available Yet</h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
+              As you record transactions or import bank statements, interactive charts and spending trends will automatically appear here.
+            </p>
+          </div>
+        )}
+
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Income vs Expenses (6-Month Trend)</CardTitle>
+              <CardTitle className="text-base">Income vs Expenses Trend</CardTitle>
             </CardHeader>
             <CardContent>
-              <IncomeExpenseChart data={monthlyTrends} />
+              {monthlyTrends.length > 0 ? (
+                <IncomeExpenseChart data={monthlyTrends} />
+              ) : (
+                <div className="h-72 w-full flex items-center justify-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                  No monthly trend data available
+                </div>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">July Expense Breakdown</CardTitle>
+              <CardTitle className="text-base">Category Expense Breakdown</CardTitle>
             </CardHeader>
             <CardContent>
-              <ExpenseBreakdownChart data={categoryBreakdown} />
+              {categoryBreakdown.length > 0 ? (
+                <ExpenseBreakdownChart data={categoryBreakdown} />
+              ) : (
+                <div className="h-72 w-full flex items-center justify-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                  No category breakdown data available
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

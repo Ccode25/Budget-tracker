@@ -24,6 +24,8 @@ import { PageWrapper } from "@/components/layout/PageWrapper";
 import { SAVINGS_GOALS } from "@/features/analytics/mock/analytics";
 import { cn } from "@/lib/utils";
 
+import { useSession } from "next-auth/react";
+
 export interface GoalItem {
   id: string;
   name: string;
@@ -52,44 +54,50 @@ const COLOR_OPTIONS = [
   "#6366f1", // Indigo
 ];
 
-function getInitialGoals(): GoalItem[] {
-  if (typeof window === "undefined") return [];
-
-  const storedGoals = window.localStorage.getItem("budget_tracker_goals");
-  if (storedGoals) {
-    try {
-      return JSON.parse(storedGoals);
-    } catch {
-      // Fallback
-    }
-  }
-
-  const storedUserStr = window.localStorage.getItem("budget_tracker_user");
-  if (storedUserStr) {
-    try {
-      const user = JSON.parse(storedUserStr);
-      if (user?.isDemo) {
-        return SAVINGS_GOALS;
-      }
-    } catch {
-      // Fallback
-    }
-  }
-
-  // Real logged in users start with empty goals list
-  return [];
-}
-
 export function GoalsContent() {
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
   const [mounted, setMounted] = useState(false);
-  const [goals, setGoals] = useState<GoalItem[]>(getInitialGoals);
+  const [goals, setGoals] = useState<GoalItem[]>([]);
   const [filter, setFilter] = useState<"all" | "in-progress" | "completed">("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<GoalItem | null>(null);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+
+    if (isAuthenticated) {
+      fetch("/api/dashboard")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.goals) {
+            setGoals(
+              data.goals.map((g: any) => ({
+                id: g.id,
+                name: g.name,
+                target: parseFloat(g.target_amount ?? g.targetAmount ?? g.target ?? 0),
+                saved: parseFloat(g.saved_amount ?? g.savedAmount ?? g.saved ?? 0),
+                deadline: g.deadline,
+                color: g.color || "#7c3aed",
+                icon: g.icon || "Target",
+              }))
+            );
+          }
+        })
+        .catch((err) => console.error("Failed to fetch user goals", err));
+    } else if (typeof window !== "undefined") {
+      const storedUser = window.localStorage.getItem("budget_tracker_user");
+      if (storedUser) {
+        try {
+          const u = JSON.parse(storedUser);
+          if (u?.isDemo) setGoals(SAVINGS_GOALS);
+        } catch {
+          setGoals([]);
+        }
+      }
+    }
+  }, [isAuthenticated]);
 
   // Sync to localStorage
   useEffect(() => {

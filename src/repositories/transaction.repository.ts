@@ -1,14 +1,9 @@
-/**
- * Transaction Repository
- * Encapsulates database operations for transaction entity management.
- */
-
-import type { Transaction, TransactionFilters, TransactionSort } from "@/types/transaction";
-import { MOCK_TRANSACTIONS } from "@/features/transactions/mock/transactions";
+import type { Transaction, TransactionFilters, TransactionSort } from "../types/transaction";
+import { dbClient } from "../database/client";
 
 export class TransactionRepository {
   private static instance: TransactionRepository;
-  private transactions: Transaction[] = [...MOCK_TRANSACTIONS];
+  private transactions: Transaction[] = [];
 
   public static getInstance(): TransactionRepository {
     if (!TransactionRepository.instance) {
@@ -17,107 +12,159 @@ export class TransactionRepository {
     return TransactionRepository.instance;
   }
 
+  /**
+   * Retrieves transactions strictly scoped by authenticated user_id from Neon PostgreSQL
+   */
   async findAll(
+    userId: string,
     filters?: Partial<TransactionFilters>,
     sort?: TransactionSort,
     page = 1,
     pageSize = 20
   ): Promise<{ data: Transaction[]; total: number }> {
-    let result = [...this.transactions];
+    try {
+      let queryStr = "SELECT * FROM transactions WHERE user_id = $1 AND deleted_at IS NULL";
+      const params: any[] = [userId];
 
-    if (filters) {
-      if (filters.search) {
-        const q = filters.search.toLowerCase();
-        result = result.filter(
-          (t) =>
-            t.description.toLowerCase().includes(q) ||
-            (t.merchant?.toLowerCase().includes(q) ?? false) ||
-            (t.notes?.toLowerCase().includes(q) ?? false)
-        );
+      if (filters?.search) {
+        params.push(`%${filters.search}%`);
+        queryStr += ` AND (LOWER(description) LIKE LOWER($${params.length}) OR LOWER(merchant) LIKE LOWER($${params.length}))`;
       }
-      if (filters.types && filters.types.length > 0) {
-        result = result.filter((t) => filters.types!.includes(t.type));
+
+      if (filters?.types && filters.types.length > 0) {
+        params.push(filters.types);
+        queryStr += ` AND type = ANY($${params.length})`;
       }
-      if (filters.categoryIds && filters.categoryIds.length > 0) {
-        result = result.filter((t) => filters.categoryIds!.includes(t.categoryId));
-      }
-      if (filters.statuses && filters.statuses.length > 0) {
-        result = result.filter((t) => filters.statuses!.includes(t.status));
-      }
-      if (filters.dateFrom) {
-        result = result.filter((t) => t.date >= filters.dateFrom!);
-      }
-      if (filters.dateTo) {
-        result = result.filter((t) => t.date <= filters.dateTo!);
-      }
-      if (filters.amountMin !== undefined && filters.amountMin !== null) {
-        result = result.filter((t) => t.amount >= filters.amountMin!);
-      }
-      if (filters.amountMax !== undefined && filters.amountMax !== null) {
-        result = result.filter((t) => t.amount <= filters.amountMax!);
-      }
+
+      const countRes = await dbClient.query<{ count: string }>(`SELECT COUNT(*) as count FROM (${queryStr}) as filtered`, params);
+      const total = parseInt(countRes[0]?.count || "0", 10);
+
+      const offset = (page - 1) * pageSize;
+      params.push(pageSize, offset);
+      queryStr += ` ORDER BY date DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+
+      const rows = await dbClient.query<any>(queryStr, params);
+      const data: Transaction[] = rows.map((r) => ({
+        id: r.id,
+        date: r.date,
+        description: r.description,
+        amount: parseFloat(r.amount),
+        type: r.type,
+        categoryId: r.category_id,
+        accountId: r.account_id,
+        status: r.status,
+        merchant: r.merchant,
+        notes: r.notes,
+        isImported: r.is_imported,
+      }));
+
+      return { data, total };
+    } catch (err) {
+      console.error("TransactionRepository Neon query error:", err);
+      return { data: [], total: 0 };
     }
-
-    if (sort) {
-      result.sort((a, b) => {
-        let cmp = 0;
-        switch (sort.field) {
-          case "date":
-            cmp = a.date.localeCompare(b.date);
-            break;
-          case "amount":
-            cmp = a.amount - b.amount;
-            break;
-          case "description":
-            cmp = a.description.localeCompare(b.description);
-            break;
-          case "category":
-            cmp = a.categoryId.localeCompare(b.categoryId);
-            break;
-        }
-        return sort.direction === "asc" ? cmp : -cmp;
-      });
-    }
-
-    const total = result.length;
-    const startIndex = (page - 1) * pageSize;
-    const data = result.slice(startIndex, startIndex + pageSize);
-
-    return { data, total };
   }
 
-  async findById(id: string): Promise<Transaction | null> {
-    return this.transactions.find((t) => t.id === id) ?? null;
+  async findById(id: string, userId: string): Promise<Transaction | null> {
+    try {
+      const rows = await dbClient.query<any>(
+        "SELECT * FROM transactions WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL",
+        [id, userId]
+      );
+      if (rows.length === 0) return null;
+      const r = rows[0];
+      return {
+        id: r.id,
+        date: r.date,
+        description: r.description,
+        amount: parseFloat(r.amount),
+        type: r.type,
+        categoryId: r.category_id,
+        accountId: r.account_id,
+        status: r.status,
+        merchant: r.merchant,
+        notes: r.notes,
+        isImported: r.is_imported,
+      };
+    } catch {
+      return null;
+    }
   }
 
-  async create(data: Omit<Transaction, "id">): Promise<Transaction> {
+  async create(data: Omit<Transaction, "id">, userId: string): Promise<Transaction> {
+    const newTxId = `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const newTx: Transaction = {
       ...data,
-      id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: newTxId,
     };
-    this.transactions.unshift(newTx);
+
+    await dbClient.query(
+      `INSERT INTO transactions (id, uuid, user_id, category_id, account_id, date, description, amount, type, status, notes, merchant, is_imported)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [
+        newTxId,
+        `uuid-${newTxId}`,
+        userId,
+        data.categoryId,
+        data.accountId || null,
+        data.date,
+        data.description,
+        data.amount,
+        data.type,
+        data.status,
+        data.notes || null,
+        data.merchant || null,
+        data.isImported || false,
+      ]
+    );
+
     return newTx;
   }
 
-  async update(id: string, updates: Partial<Transaction>): Promise<Transaction | null> {
-    const index = this.transactions.findIndex((t) => t.id === id);
-    if (index === -1) return null;
+  async update(id: string, updates: Partial<Transaction>, userId: string): Promise<Transaction | null> {
+    const existing = await this.findById(id, userId);
+    if (!existing) return null;
 
-    this.transactions[index] = { ...this.transactions[index], ...updates };
-    return this.transactions[index];
+    const updated: Transaction = {
+      ...existing,
+      ...updates,
+    };
+
+    await dbClient.query(
+      `UPDATE transactions 
+       SET date = $3,
+           description = $4,
+           amount = $5,
+           type = $6,
+           category_id = $7,
+           status = $8,
+           notes = $9,
+           merchant = $10,
+           updated_at = NOW()
+       WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
+      [
+        id,
+        userId,
+        updated.date,
+        updated.description,
+        updated.amount,
+        updated.type,
+        updated.categoryId,
+        updated.status,
+        updated.notes || null,
+        updated.merchant || null,
+      ]
+    );
+
+    return updated;
   }
 
-  async delete(id: string): Promise<boolean> {
-    const initialLen = this.transactions.length;
-    this.transactions = this.transactions.filter((t) => t.id !== id);
-    return this.transactions.length < initialLen;
-  }
-
-  async getMonthlySummary(yearMonth: string): Promise<{ income: number; expenses: number }> {
-    const monthTx = this.transactions.filter((t) => t.date.startsWith(yearMonth) && t.status !== "failed");
-    const income = monthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-    const expenses = monthTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
-    return { income, expenses };
+  async delete(id: string, userId: string): Promise<boolean> {
+    const res = await dbClient.query(
+      "DELETE FROM transactions WHERE id = $1 AND user_id = $2 RETURNING id",
+      [id, userId]
+    );
+    return res.length > 0;
   }
 }
 

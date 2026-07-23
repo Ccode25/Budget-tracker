@@ -23,13 +23,24 @@ interface UserSession {
   isDemo?: boolean;
 }
 
+import { useSession, signOut } from "next-auth/react";
+
 export function Header({ title, className }: HeaderProps) {
   const router = useRouter();
+  const { data: session } = useSession();
   const [user, setUser] = useState<UserSession | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (session?.user) {
+      setUser({
+        id: (session.user as any).id || "google-user",
+        name: session.user.name || "Google User",
+        email: session.user.email || "",
+        avatarUrl: session.user.image || undefined,
+        isDemo: false,
+      });
+    } else if (typeof window !== "undefined") {
       const stored = window.localStorage.getItem("budget_tracker_user");
       if (stored) {
         try {
@@ -39,10 +50,14 @@ export function Header({ title, className }: HeaderProps) {
         }
       }
     }
-  }, []);
+  }, [session]);
 
   const handleLogout = async () => {
     try {
+      if (session) {
+        await signOut({ callbackUrl: "/login" });
+        return;
+      }
       await fetch("/api/auth/logout", { method: "POST" });
     } catch (e) {
       console.error("Logout request failed", e);

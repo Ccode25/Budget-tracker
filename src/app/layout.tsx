@@ -29,6 +29,8 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+import { AuthSessionProvider } from "@/components/providers/AuthSessionProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -42,10 +44,12 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className={`${inter.className} ${inter.variable}`}>
-        <ThemeProvider>
-          {children}
-          <Toaster richColors position="top-right" />
-        </ThemeProvider>
+        <AuthSessionProvider>
+          <ThemeProvider>
+            {children}
+            <Toaster richColors position="top-right" />
+          </ThemeProvider>
+        </AuthSessionProvider>
       </body>
     </html>
   );

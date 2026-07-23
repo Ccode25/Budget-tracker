@@ -1,21 +1,68 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Transaction } from "@/types/transaction";
-import { MOCK_TRANSACTIONS } from "@/features/transactions/mock/transactions";
+import type { Budget } from "@/types/budget";
 import { MOCK_BUDGETS } from "@/features/budgets/mock/budgets";
-import { SAVINGS_GOALS, MONTHLY_DATA } from "@/features/analytics/mock/analytics";
+import { SAVINGS_GOALS } from "@/features/analytics/mock/analytics";
+import { DEMO_TRANSACTIONS } from "@/features/transactions/mock/transactions";
 import { getCategoryName, getCategoryColor } from "@/features/categories/mock/categories";
 
 export function useDashboard() {
-  const [allTransactions] = useLocalStorage<Transaction[]>(
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
+  // Server state for authenticated users
+  const [dbData, setDbData] = useState<{
+    transactions: Transaction[];
+    budgets: Budget[];
+    goals: any[];
+  }>({ transactions: [], budgets: [], goals: [] });
+
+  // Local storage state ONLY for explicit Demo Mode
+  const [demoTransactions] = useLocalStorage<Transaction[]>(
     "budget_tracker_transactions",
-    MOCK_TRANSACTIONS
+    []
   );
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch("/api/dashboard")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            setDbData({
+              transactions: data.transactions || [],
+              budgets: data.budgets || [],
+              goals: data.goals || [],
+            });
+          }
+        })
+        .catch((err) => console.error("Failed to fetch authenticated dashboard data", err));
+    }
+  }, [isAuthenticated]);
+
+  // Determine active transactions: Server DB data if authenticated; Demo data only if in demo mode
+  const allTransactions = useMemo(() => {
+    if (isAuthenticated) return dbData.transactions;
+
+    if (typeof window !== "undefined") {
+      const storedUser = window.localStorage.getItem("budget_tracker_user");
+      if (storedUser) {
+        try {
+          const u = JSON.parse(storedUser);
+          if (u?.isDemo) return demoTransactions.length > 0 ? demoTransactions : DEMO_TRANSACTIONS;
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return [];
+  }, [isAuthenticated, dbData.transactions, demoTransactions]);
+
   return useMemo(() => {
-    // Deduplicate array by ID to eliminate any legacy duplicate keys
     const uniqueMap = new Map<string, Transaction>();
     for (const item of allTransactions) {
       if (!uniqueMap.has(item.id)) {
@@ -23,26 +70,21 @@ export function useDashboard() {
       }
     }
     const uniqueTransactions = Array.from(uniqueMap.values());
-
     const validTransactions = uniqueTransactions.filter((t) => t.status !== "failed");
 
-    // Get current month string (e.g. "2026-07")
     const now = new Date();
     const currentYr = now.getFullYear();
     const currentMo = String(now.getMonth() + 1).padStart(2, "0");
     const currentMonthPrefix = `${currentYr}-${currentMo}`;
 
-    // Previous month prefix
     const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const prevYr = prevDate.getFullYear();
     const prevMo = String(prevDate.getMonth() + 1).padStart(2, "0");
     const prevMonthPrefix = `${prevYr}-${prevMo}`;
 
-    // Filter current month transactions
     const currentMonthTx = validTransactions.filter((t) => t.date.startsWith(currentMonthPrefix));
     const prevMonthTx = validTransactions.filter((t) => t.date.startsWith(prevMonthPrefix));
 
-    // Calculate current month income & expenses
     const income = currentMonthTx
       .filter((t) => t.type === "income")
       .reduce((s, t) => s + t.amount, 0);
@@ -54,7 +96,6 @@ export function useDashboard() {
     const savings = income - expenses;
     const savingsRate = income > 0 ? (savings / income) * 100 : 0;
 
-    // Previous month totals for trends
     const prevIncome = prevMonthTx
       .filter((t) => t.type === "income")
       .reduce((s, t) => s + t.amount, 0);
@@ -63,16 +104,9 @@ export function useDashboard() {
       .filter((t) => t.type === "expense")
       .reduce((s, t) => s + t.amount, 0);
 
-    const incomeTrend =
-      prevIncome > 0
-        ? ((income - prevIncome) / prevIncome) * 100
-        : 0;
-    const expenseTrend =
-      prevExpenses > 0
-        ? ((expenses - prevExpenses) / prevExpenses) * 100
-        : 0;
+    const incomeTrend = prevIncome > 0 ? ((income - prevIncome) / prevIncome) * 100 : 0;
+    const expenseTrend = prevExpenses > 0 ? ((expenses - prevExpenses) / prevExpenses) * 100 : 0;
 
-    // All-time balance computation
     const totalAllTimeIncome = validTransactions
       .filter((t) => t.type === "income")
       .reduce((s, t) => s + t.amount, 0);
@@ -83,7 +117,6 @@ export function useDashboard() {
 
     const currentBalance = totalAllTimeIncome - totalAllTimeExpenses;
 
-    // Recent transactions sorted by date desc
     const sortedTx = [...uniqueTransactions].sort((a, b) => b.date.localeCompare(a.date));
     const recentTransactions = sortedTx.slice(0, 10).map((t) => ({
       ...t,
@@ -91,7 +124,6 @@ export function useDashboard() {
       categoryColor: getCategoryColor(t.categoryId),
     }));
 
-    // Calculate actual category spending for current month from transactions
     const categorySpentMap: Record<string, number> = {};
     for (const t of currentMonthTx) {
       if (t.type === "expense") {
@@ -100,23 +132,16 @@ export function useDashboard() {
     }
 
     let userBudgets: typeof MOCK_BUDGETS = [];
-    if (typeof window !== "undefined") {
-      const storedBudgets = window.localStorage.getItem("budget_tracker_budgets");
-      if (storedBudgets) {
+    if (isAuthenticated) {
+      userBudgets = dbData.budgets;
+    } else if (typeof window !== "undefined") {
+      const storedUserStr = window.localStorage.getItem("budget_tracker_user");
+      if (storedUserStr) {
         try {
-          userBudgets = JSON.parse(storedBudgets);
+          const u = JSON.parse(storedUserStr);
+          if (u?.isDemo) userBudgets = MOCK_BUDGETS;
         } catch {
           userBudgets = [];
-        }
-      } else {
-        const storedUserStr = window.localStorage.getItem("budget_tracker_user");
-        if (storedUserStr) {
-          try {
-            const u = JSON.parse(storedUserStr);
-            if (u?.isDemo) userBudgets = MOCK_BUDGETS;
-          } catch {
-            userBudgets = [];
-          }
         }
       }
     }
@@ -142,24 +167,17 @@ export function useDashboard() {
         }
       : null;
 
-    let userGoals: typeof SAVINGS_GOALS = [];
-    if (typeof window !== "undefined") {
-      const storedGoals = window.localStorage.getItem("budget_tracker_goals");
-      if (storedGoals) {
+    let userGoals: any[] = [];
+    if (isAuthenticated) {
+      userGoals = dbData.goals;
+    } else if (typeof window !== "undefined") {
+      const storedUserStr = window.localStorage.getItem("budget_tracker_user");
+      if (storedUserStr) {
         try {
-          userGoals = JSON.parse(storedGoals);
+          const u = JSON.parse(storedUserStr);
+          if (u?.isDemo) userGoals = SAVINGS_GOALS;
         } catch {
           userGoals = [];
-        }
-      } else {
-        const storedUserStr = window.localStorage.getItem("budget_tracker_user");
-        if (storedUserStr) {
-          try {
-            const u = JSON.parse(storedUserStr);
-            if (u?.isDemo) userGoals = SAVINGS_GOALS;
-          } catch {
-            userGoals = [];
-          }
         }
       }
     }
@@ -177,6 +195,6 @@ export function useDashboard() {
       activeBudget: dynamicActiveBudget,
       goals: userGoals,
     };
-  }, [allTransactions]);
+  }, [allTransactions, isAuthenticated, dbData.budgets, dbData.goals]);
 }
 

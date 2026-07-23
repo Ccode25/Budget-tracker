@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertCircle, CheckCircle2, ArrowRight, ArrowLeft, FileText, Check, AlertTriangle } from "lucide-react";
-import { MOCK_CATEGORIES } from "@/features/categories/mock/categories";
+import { useCategories } from "@/features/categories/hooks/useCategories";
 import { StandardField } from "@/types/import";
 
 interface ImportWizardProps {
@@ -15,6 +15,7 @@ interface ImportWizardProps {
 }
 
 export function ImportWizard({ onClose }: ImportWizardProps) {
+  const { categories } = useCategories();
   const {
     state,
     handleSelectFile,
@@ -205,12 +206,12 @@ export function ImportWizard({ onClose }: ImportWizardProps) {
                         <select
                           value={row.categoryId}
                           onChange={(e) => {
-                            const cat = MOCK_CATEGORIES.find((c) => c.id === e.target.value);
+                            const cat = categories.find((c) => c.id === e.target.value);
                             if (cat) updateRowCategory(row.rowIndex, cat.id, cat.name);
                           }}
                           className="rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                          {MOCK_CATEGORIES.map((c) => (
+                          {categories.map((c) => (
                             <option key={c.id} value={c.id}>
                               {c.name}
                             </option>

@@ -8,6 +8,7 @@ export interface Transaction {
   amount: number; // always positive; type determines direction
   type: TransactionType;
   categoryId: string;
+  accountId?: string | null;
   status: TransactionStatus;
   notes?: string;
   tags?: string[];

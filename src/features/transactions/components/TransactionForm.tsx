@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MOCK_CATEGORIES } from "@/features/categories/mock/categories";
+import { useCategories } from "@/features/categories/hooks/useCategories";
 import type { Transaction } from "@/types/transaction";
 
 const schema = z.object({
@@ -43,6 +43,7 @@ export function TransactionForm({
   onSubmit,
 }: TransactionFormProps) {
   const isEditing = !!transaction;
+  const { categories } = useCategories();
 
   const {
     register,
@@ -56,11 +57,14 @@ export function TransactionForm({
       date: new Date().toISOString().slice(0, 10),
       type: "expense",
       status: "completed",
-      categoryId: "cat-food",
+      categoryId: "",
     },
   });
 
   const selectedType = watch("type");
+  const filteredCategories = categories.filter(
+    (c) => c.type === selectedType || c.type === "both"
+  );
 
   // Populate when editing
   useEffect(() => {
@@ -85,10 +89,6 @@ export function TransactionForm({
       });
     }
   }, [transaction, reset, open]);
-
-  const filteredCategories = MOCK_CATEGORIES.filter(
-    (c) => c.type === selectedType || c.type === "both",
-  );
 
   const handleFormSubmit = (data: FormValues) => {
     onSubmit({

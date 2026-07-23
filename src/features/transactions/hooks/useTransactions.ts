@@ -1,8 +1,7 @@
-"use client";
-
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useSession } from "next-auth/react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { MOCK_TRANSACTIONS } from "../mock/transactions";
+import { DEMO_TRANSACTIONS } from "../mock/transactions";
 import { getCategoryName, getCategoryColor } from "@/features/categories/mock/categories";
 import type {
   Transaction,
@@ -39,21 +38,53 @@ function enrichTransaction(t: Transaction): EnrichedTransaction {
 }
 
 export function useTransactions() {
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
   const [filters, setFilters] = useState<TransactionFilters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<TransactionSort>({ field: "date", direction: "desc" });
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  // Local additions (mock add/edit/delete) persisted to localStorage
-  const [localTransactions, setLocalTransactions] = useLocalStorage<Transaction[]>(
+  const [dbTransactions, setDbTransactions] = useState<Transaction[]>([]);
+  const [demoTransactions, setDemoTransactions] = useLocalStorage<Transaction[]>(
     "budget_tracker_transactions",
-    MOCK_TRANSACTIONS
+    []
   );
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch("/api/transactions")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.data) {
+            setDbTransactions(data.data);
+          }
+        })
+        .catch((err) => console.error("Failed to fetch transactions", err));
+    }
+  }, [isAuthenticated]);
+
+  const activeTransactions = useMemo(() => {
+    if (isAuthenticated) return dbTransactions;
+
+    if (typeof window !== "undefined") {
+      const storedUser = window.localStorage.getItem("budget_tracker_user");
+      if (storedUser) {
+        try {
+          const u = JSON.parse(storedUser);
+          if (u?.isDemo) return demoTransactions.length > 0 ? demoTransactions : DEMO_TRANSACTIONS;
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return [];
+  }, [isAuthenticated, dbTransactions, demoTransactions]);
+
   const filteredAndSorted = useMemo(() => {
-    // Deduplicate array by ID to eliminate any legacy duplicate localStorage keys
     const uniqueMap = new Map<string, Transaction>();
-    for (const item of localTransactions) {
+    for (const item of activeTransactions) {
       if (!uniqueMap.has(item.id)) {
         uniqueMap.set(item.id, item);
       }
@@ -126,7 +157,7 @@ export function useTransactions() {
     });
 
     return result;
-  }, [localTransactions, filters, sort]);
+  }, [activeTransactions, filters, sort]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAndSorted.length / PAGE_SIZE));
   const paginatedItems = filteredAndSorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -156,24 +187,76 @@ export function useTransactions() {
     );
   }, []);
 
-  const addTransaction = useCallback((tx: Omit<Transaction, "id">) => {
-    const newTx: Transaction = {
-      ...tx,
-      id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    };
-    setLocalTransactions((prev) => [newTx, ...prev]);
-  }, [setLocalTransactions]);
+  const addTransaction = useCallback(
+    async (tx: Omit<Transaction, "id">) => {
+      if (isAuthenticated) {
+        try {
+          const res = await fetch("/api/transactions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(tx),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setDbTransactions((prev) => [data.data, ...prev]);
+          }
+        } catch (err) {
+          console.error("Failed to save transaction to database", err);
+        }
+        return;
+      }
+      const newTx: Transaction = {
+        ...tx,
+        id: `tx-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      };
+      setDemoTransactions((prev) => [newTx, ...prev]);
+    },
+    [isAuthenticated, setDemoTransactions]
+  );
 
-  const updateTransaction = useCallback((id: string, updates: Partial<Transaction>) => {
-    setLocalTransactions((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-    );
-  }, []);
+  const updateTransaction = useCallback(
+    async (id: string, updates: Partial<Transaction>) => {
+      if (isAuthenticated) {
+        setDbTransactions((prev) =>
+          prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+        );
+        try {
+          await fetch(`/api/transactions/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updates),
+          });
+        } catch (err) {
+          console.error("Failed to update transaction in database:", err);
+        }
+        return;
+      }
+      setDemoTransactions((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
+      );
+    },
+    [isAuthenticated, setDemoTransactions]
+  );
 
-  const deleteTransaction = useCallback((id: string) => {
-    setLocalTransactions((prev) => prev.filter((t) => t.id !== id));
-    if (selectedId === id) setSelectedId(null);
-  }, [selectedId]);
+  const deleteTransaction = useCallback(
+    async (id: string) => {
+      if (isAuthenticated) {
+        setDbTransactions((prev) => prev.filter((t) => t.id !== id));
+        if (selectedId === id) setSelectedId(null);
+        try {
+          await fetch(`/api/transactions/${id}`, {
+            method: "DELETE",
+          });
+        } catch (err) {
+          console.error("Failed to delete transaction from database:", err);
+        }
+        return;
+      }
+      setDemoTransactions((prev) => prev.filter((t) => t.id !== id));
+      if (selectedId === id) setSelectedId(null);
+    },
+    [isAuthenticated, selectedId, setDemoTransactions]
+  );
 
   const hasActiveFilters = useMemo(
     () =>

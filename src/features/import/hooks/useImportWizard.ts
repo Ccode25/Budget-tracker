@@ -14,7 +14,6 @@ import { validateFile, validateParseResult } from "../validators/file.validator"
 import { autoMapColumns } from "../mappers/column.mapper";
 import { autoCategorizeDescription } from "../services/categorizer";
 import { detectDuplicates } from "../services/duplicate-detector";
-import { MOCK_TRANSACTIONS } from "@/features/transactions/mock/transactions";
 
 type Action =
   | { type: "SET_FILE"; file: File }
@@ -154,7 +153,7 @@ export function useImportWizard() {
         };
       });
 
-      const duplicateFlags = detectDuplicates(mappedRows, MOCK_TRANSACTIONS);
+      const duplicateFlags = detectDuplicates(mappedRows, []);
 
       dispatch({
         type: "SET_PARSED",
@@ -214,7 +213,7 @@ export function useImportWizard() {
     if (typeof window !== "undefined" && toImport.length > 0) {
       try {
         const stored = window.localStorage.getItem("budget_tracker_transactions");
-        const existing: Transaction[] = stored ? JSON.parse(stored) : MOCK_TRANSACTIONS;
+        const existing: Transaction[] = stored ? JSON.parse(stored) : [];
         const updated = [...toImport, ...existing];
         window.localStorage.setItem("budget_tracker_transactions", JSON.stringify(updated));
         window.dispatchEvent(new CustomEvent("local-storage-update", { detail: { key: "budget_tracker_transactions", newValue: updated } }));

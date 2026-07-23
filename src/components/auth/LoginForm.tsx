@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { FormField } from "@/components/ui/FormField";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -91,7 +92,15 @@ export function LoginForm({ onSubmit, isLoading = false, errorMessage }: LoginFo
         </div>
       </div>
 
-      <Button type="button" variant="outline" className="w-full h-10 gap-2 text-xs font-medium" disabled={isLoading}>
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full h-10 gap-2 text-xs font-medium"
+        disabled={isLoading}
+        onClick={() => {
+          signIn("google", { callbackUrl: "/dashboard" });
+        }}
+      >
         <svg className="h-4 w-4" viewBox="0 0 24 24">
           <path
             fill="currentColor"

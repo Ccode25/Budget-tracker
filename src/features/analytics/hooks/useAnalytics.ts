@@ -1,20 +1,61 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useSession } from "next-auth/react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { MOCK_TRANSACTIONS } from "@/features/transactions/mock/transactions";
+import { DEMO_TRANSACTIONS } from "@/features/transactions/mock/transactions";
 import { MOCK_CATEGORIES } from "@/features/categories/mock/categories";
 import type { Transaction } from "@/types/transaction";
-import type { MonthlyData, CategoryBreakdown, CashFlowEntry } from "@/types/analytics";
+import type { MonthlyData, CategoryBreakdown } from "@/types/analytics";
 
 export function useAnalytics() {
-  const [allTransactions] = useLocalStorage<Transaction[]>(
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
+  const [dbTransactions, setDbTransactions] = useState<Transaction[]>([]);
+  const [demoTransactions] = useLocalStorage<Transaction[]>(
     "budget_tracker_transactions",
-    MOCK_TRANSACTIONS
+    []
   );
 
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetch("/api/transactions")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.data) {
+            setDbTransactions(data.data);
+          }
+        })
+        .catch((err) => console.error("Failed to fetch analytics transactions", err));
+    }
+  }, [isAuthenticated]);
+
+  const activeTransactions = useMemo(() => {
+    if (isAuthenticated) return dbTransactions;
+
+    if (typeof window !== "undefined") {
+      const storedUser = window.localStorage.getItem("budget_tracker_user");
+      if (storedUser) {
+        try {
+          const u = JSON.parse(storedUser);
+          if (u?.isDemo) return demoTransactions.length > 0 ? demoTransactions : DEMO_TRANSACTIONS;
+        } catch {
+          // fallback
+        }
+      }
+    }
+    return [];
+  }, [isAuthenticated, dbTransactions, demoTransactions]);
+
   return useMemo(() => {
-    const valid = allTransactions.filter((t) => t.status !== "failed");
+    const valid = activeTransactions.filter((t) => t.status !== "failed");
+
+    // Get current YYYY-MM prefix dynamically
+    const now = new Date();
+    const currentYr = now.getFullYear();
+    const currentMo = String(now.getMonth() + 1).padStart(2, "0");
+    const currentMonthPrefix = `${currentYr}-${currentMo}`;
 
     // Group transactions by YYYY-MM
     const monthlyMap: Record<string, { income: number; expenses: number }> = {};
@@ -36,8 +77,8 @@ export function useAnalytics() {
         monthlyMap[yearMonth].expenses += t.amount;
         totalExpenses += t.amount;
 
-        // Current month category breakdown (e.g. 2026-07)
-        if (t.date.startsWith("2026-07")) {
+        // Current month category breakdown
+        if (t.date.startsWith(currentMonthPrefix)) {
           if (!categoryMap[t.categoryId]) {
             categoryMap[t.categoryId] = { amount: 0, count: 0 };
           }
@@ -98,6 +139,6 @@ export function useAnalytics() {
         avgMonthlyExpense: totalExpenses / monthsCount,
       },
     };
-  }, [allTransactions]);
+  }, [activeTransactions]);
 }
 

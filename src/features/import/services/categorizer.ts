@@ -1,4 +1,4 @@
-import { MOCK_CATEGORIES } from "@/features/categories/mock/categories";
+import type { Category } from "@/types/category";
 
 const KEYWORD_RULES: Array<{ keywords: string[]; categoryId: string }> = [
   { keywords: ["starbucks", "jollibee", "mcdonald", "chipotle", "whole foods", "costco", "doordash", "ubereats", "restaurant", "cafe"], categoryId: "cat-food" },
@@ -13,12 +13,15 @@ const KEYWORD_RULES: Array<{ keywords: string[]; categoryId: string }> = [
   { keywords: ["pharmacy", "doctor", "clinic", "hospital", "fitness", "gym"], categoryId: "cat-health" },
 ];
 
-export function autoCategorizeDescription(description: string): { categoryId: string; categoryName: string; isAutoAssigned: boolean } {
+export function autoCategorizeDescription(
+  description: string,
+  categories: Category[] = []
+): { categoryId: string; categoryName: string; isAutoAssigned: boolean } {
   const clean = description.toLowerCase();
 
   for (const rule of KEYWORD_RULES) {
     if (rule.keywords.some((kw) => clean.includes(kw))) {
-      const cat = MOCK_CATEGORIES.find((c) => c.id === rule.categoryId);
+      const cat = categories.find((c) => c.id === rule.categoryId || c.name.toLowerCase().includes(rule.categoryId.replace("cat-", "")));
       if (cat) {
         return {
           categoryId: cat.id,
@@ -29,10 +32,10 @@ export function autoCategorizeDescription(description: string): { categoryId: st
     }
   }
 
-  const defaultCat = MOCK_CATEGORIES.find((c) => c.id === "cat-other") || MOCK_CATEGORIES[0];
+  const defaultCat = categories[0];
   return {
-    categoryId: defaultCat.id,
-    categoryName: defaultCat.name,
+    categoryId: defaultCat?.id || "cat-misc",
+    categoryName: defaultCat?.name || "Uncategorized",
     isAutoAssigned: false,
   };
 }
