@@ -84,11 +84,11 @@ export function TransactionFilterPanel({
   return (
     <div
       id="filter-panel"
-      className="w-full max-w-lg ml-auto rounded-xl border border-border bg-card p-3 shadow-md space-y-2.5 animate-in fade-in-0 slide-in-from-top-1"
+      className="w-full rounded-xl border border-border bg-card p-3 shadow-xl space-y-2.5"
       role="group"
       aria-label="Transaction filters"
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {/* Type Filter */}
         <div>
           <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -151,7 +151,7 @@ export function TransactionFilterPanel({
             type="date"
             value={filters.dateFrom ?? ""}
             onChange={(e) => onUpdate("dateFrom", e.target.value || null)}
-            className="h-8 w-full rounded-md border border-border/80 bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="h-8 w-full rounded-md border border-border/80 bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
         <div>
@@ -163,7 +163,7 @@ export function TransactionFilterPanel({
             type="date"
             value={filters.dateTo ?? ""}
             onChange={(e) => onUpdate("dateTo", e.target.value || null)}
-            className="h-8 w-full rounded-md border border-border/80 bg-background px-2.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            className="h-8 w-full rounded-md border border-border/80 bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
       </div>
@@ -180,14 +180,18 @@ export function TransactionFilters({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="w-full space-y-2.5">
+    <div className="relative">
       <TransactionFiltersButton
         open={open}
         onToggle={() => setOpen((v) => !v)}
         onReset={onReset}
         hasActive={hasActive}
       />
-      {open && <TransactionFilterPanel filters={filters} onUpdate={onUpdate} />}
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 z-30 animate-in fade-in-0 zoom-in-95">
+          <TransactionFilterPanel filters={filters} onUpdate={onUpdate} />
+        </div>
+      )}
     </div>
   );
 }

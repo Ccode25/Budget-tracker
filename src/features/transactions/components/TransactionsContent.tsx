@@ -95,27 +95,29 @@ export function TransactionsContent() {
         </div>
 
         {/* Search & Filters Toolbar */}
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <TransactionSearch
-              value={filters.search}
-              onChange={handleSearchChange}
-              count={totalCount}
-            />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <TransactionSearch
+            value={filters.search}
+            onChange={handleSearchChange}
+            count={totalCount}
+          />
+          <div className="relative">
             <TransactionFiltersButton
               open={filterOpen}
               onToggle={() => setFilterOpen((v) => !v)}
               onReset={resetFilters}
               hasActive={hasActiveFilters}
             />
-          </div>
 
-          {filterOpen && (
-            <TransactionFilterPanel
-              filters={filters}
-              onUpdate={updateFilter}
-            />
-          )}
+            {filterOpen && (
+              <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 z-30 animate-in fade-in-0 zoom-in-95">
+                <TransactionFilterPanel
+                  filters={filters}
+                  onUpdate={updateFilter}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Table */}
