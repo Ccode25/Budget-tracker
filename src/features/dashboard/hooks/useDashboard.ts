@@ -84,7 +84,7 @@ export function useDashboard() {
     const currentBalance = totalAllTimeIncome - totalAllTimeExpenses;
 
     // Recent transactions sorted by date desc
-    const sortedTx = [...allTransactions].sort((a, b) => b.date.localeCompare(a.date));
+    const sortedTx = [...uniqueTransactions].sort((a, b) => b.date.localeCompare(a.date));
     const recentTransactions = sortedTx.slice(0, 10).map((t) => ({
       ...t,
       categoryName: getCategoryName(t.categoryId),

@@ -56,7 +56,7 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
       <div className="divide-y divide-border">
         {transactions.map((tx, i) => (
           <motion.div
-            key={tx.id}
+            key={`${tx.id}-${i}`}
             initial={{ opacity: 0, x: -8 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: i * 0.04, duration: 0.2 }}
