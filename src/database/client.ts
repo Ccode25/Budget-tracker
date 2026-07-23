@@ -66,7 +66,7 @@ class NeonDatabaseClient implements DatabaseClient {
 
     try {
       const sql = this.getSql();
-      const result = await sql(sqlQuery, params);
+      const result = await (sql as any)(sqlQuery, params);
       return result as T[];
     } catch (err) {
       console.error("[Neon DB Client Query Error]", err);
