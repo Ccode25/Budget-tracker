@@ -25,7 +25,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard",    href: "/",             icon: LayoutDashboard },
+  { label: "Dashboard",    href: "/dashboard",    icon: LayoutDashboard },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "Budget",       href: "/budget",       icon: PiggyBank },
   { label: "Categories",   href: "/categories",   icon: Tag },
@@ -53,34 +53,36 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
       aria-label="Main navigation"
     >
       {/* Logo */}
-      <div className={cn(
-        "flex items-center gap-3 px-4 h-16 border-b border-sidebar-border shrink-0",
-        collapsed && "justify-center px-0",
-      )}>
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Wallet size={16} aria-hidden />
+      <Link href="/dashboard">
+        <div className={cn(
+          "flex items-center gap-3 px-4 h-16 border-b border-sidebar-border shrink-0 hover:bg-sidebar-accent/50 transition-colors cursor-pointer",
+          collapsed && "justify-center px-0",
+        )}>
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Wallet size={16} aria-hidden />
+          </div>
+          <AnimatePresence>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: "auto" }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.2 }}
+                className="font-semibold text-sm tracking-tight text-sidebar-foreground whitespace-nowrap overflow-hidden"
+              >
+                BudgetTracker
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
-        <AnimatePresence>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.2 }}
-              className="font-semibold text-sm tracking-tight text-sidebar-foreground whitespace-nowrap overflow-hidden"
-            >
-              BudgetTracker
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin py-4 px-2 space-y-1">
         {navItems.map((item) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
+            item.href === "/dashboard"
+              ? pathname === "/dashboard"
               : pathname.startsWith(item.href);
 
           const linkEl = (

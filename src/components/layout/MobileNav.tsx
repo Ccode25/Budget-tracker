@@ -19,7 +19,7 @@ interface MobileNavItem {
 }
 
 const mobileNavItems: MobileNavItem[] = [
-  { label: "Home",         href: "/",             icon: LayoutDashboard },
+  { label: "Dashboard",    href: "/dashboard",    icon: LayoutDashboard },
   { label: "Transactions", href: "/transactions", icon: ArrowLeftRight },
   { label: "Budget",       href: "/budget",       icon: PiggyBank },
   { label: "Goals",        href: "/goals",        icon: Target },
@@ -41,7 +41,7 @@ export function MobileNav() {
     >
       {mobileNavItems.map((item) => {
         const isActive =
-          item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+          item.href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(item.href);
 
         return (
           <Link
