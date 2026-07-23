@@ -84,7 +84,7 @@ export function TransactionFilterPanel({
   return (
     <div
       id="filter-panel"
-      className="w-full rounded-xl border border-border bg-card p-3 sm:p-3.5 shadow-sm space-y-3 animate-in fade-in-0 slide-in-from-top-1"
+      className="w-full max-w-lg ml-auto rounded-xl border border-border bg-card p-3 shadow-md space-y-2.5 animate-in fade-in-0 slide-in-from-top-1"
       role="group"
       aria-label="Transaction filters"
     >
