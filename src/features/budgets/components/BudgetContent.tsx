@@ -10,14 +10,26 @@ import { BudgetCard } from "./BudgetCard";
 import { BudgetForm } from "./BudgetForm";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import type { Budget } from "@/types/budget";
 
 export function BudgetContent() {
-  const { activeBudgets, addBudget, selectedId, setSelectedId } = useBudgets();
+  const { activeBudgets, addBudget, updateBudget, deleteBudget, setSelectedId } = useBudgets();
   const [formOpen, setFormOpen] = useState(false);
+  const [editingBudget, setEditingBudget] = useState<Budget | null>(null);
 
   const totalLimit = activeBudgets.reduce((s, b) => s + b.totalLimit, 0);
   const totalSpent = activeBudgets.reduce((s, b) => s + b.totalSpent, 0);
   const totalPct = totalLimit > 0 ? Math.round((totalSpent / totalLimit) * 100) : 0;
+
+  const handleOpenAdd = () => {
+    setEditingBudget(null);
+    setFormOpen(true);
+  };
+
+  const handleOpenEdit = (budget: Budget) => {
+    setEditingBudget(budget);
+    setFormOpen(true);
+  };
 
   return (
     <PageWrapper>
@@ -29,7 +41,7 @@ export function BudgetContent() {
               Set spending targets and manage monthly limits.
             </p>
           </div>
-          <Button className="gap-2 shrink-0" onClick={() => setFormOpen(true)}>
+          <Button className="gap-2 shrink-0" onClick={handleOpenAdd}>
             <Plus size={14} aria-hidden /> Create Budget
           </Button>
         </div>
@@ -74,7 +86,7 @@ export function BudgetContent() {
               <p className="text-xs text-muted-foreground max-w-sm mx-auto">
                 Create a budget plan to set category spending limits and monitor monthly usage.
               </p>
-              <Button size="sm" onClick={() => setFormOpen(true)} className="gap-2">
+              <Button size="sm" onClick={handleOpenAdd} className="gap-2">
                 <Plus size={14} /> Create Budget
               </Button>
             </div>
@@ -85,6 +97,8 @@ export function BudgetContent() {
                   key={b.id}
                   budget={b}
                   onClick={() => setSelectedId(b.id)}
+                  onEdit={handleOpenEdit}
+                  onDelete={deleteBudget}
                 />
               ))}
             </div>
@@ -95,6 +109,8 @@ export function BudgetContent() {
           open={formOpen}
           onOpenChange={setFormOpen}
           onSubmit={addBudget}
+          budget={editingBudget}
+          onUpdate={updateBudget}
         />
       </Container>
     </PageWrapper>
