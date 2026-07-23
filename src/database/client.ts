@@ -1,13 +1,10 @@
 /**
  * Neon Database Client Provider
- * Manages Neon Serverless Postgres SQL connections and health checks.
+ * Manages Neon Serverless Postgres SQL connections and health checks via Pool.
  */
 
-import { neon, neonConfig, Pool } from "@neondatabase/serverless";
-import { dbConfig } from "@/config/db";
-
-// Enable fetch connection pooling for serverless environments
-neonConfig.fetchConnectionCache = true;
+import { Pool } from "@neondatabase/serverless";
+import { dbConfig } from "../config/db";
 
 export interface DatabaseClient {
   isReady: boolean;
@@ -21,23 +18,24 @@ class NeonDatabaseClient implements DatabaseClient {
   public isReady = false;
   private pool: Pool | null = null;
 
-  private getSql() {
-    if (!dbConfig.dbUrl) {
-      throw new Error("DATABASE_URL is not defined in environment variables.");
+  private getPool(): Pool {
+    if (!this.pool) {
+      if (!dbConfig.dbUrl) {
+        throw new Error("DATABASE_URL is not defined in environment variables.");
+      }
+      this.pool = new Pool({ connectionString: dbConfig.dbUrl });
     }
-    return neon(dbConfig.dbUrl);
+    return this.pool;
   }
 
   async connect(): Promise<void> {
     try {
       if (dbConfig.dbUrl) {
-        this.pool = new Pool({ connectionString: dbConfig.dbUrl });
+        this.getPool();
         this.isReady = true;
         if (dbConfig.logging) {
-          console.log("[Neon DB Client] Connected to Neon Serverless Postgres.");
+          console.log("[Neon DB Client] Connected to Neon Serverless Postgres via Pool.");
         }
-      } else {
-        console.warn("[Neon DB Client] Warning: DATABASE_URL environment variable is missing.");
       }
     } catch (err) {
       console.error("[Neon DB Client Error] Failed to connect to Neon Postgres:", err);
@@ -65,9 +63,9 @@ class NeonDatabaseClient implements DatabaseClient {
     }
 
     try {
-      const sql = this.getSql();
-      const result = await (sql as any)(sqlQuery, params);
-      return result as T[];
+      const pool = this.getPool();
+      const result = await pool.query(sqlQuery, params);
+      return result.rows as T[];
     } catch (err) {
       console.error("[Neon DB Client Query Error]", err);
       throw err;
@@ -77,9 +75,9 @@ class NeonDatabaseClient implements DatabaseClient {
   async healthCheck(): Promise<boolean> {
     try {
       if (!dbConfig.dbUrl) return false;
-      const sql = this.getSql();
-      const res = await sql`SELECT 1 as alive`;
-      return Array.isArray(res) && res.length > 0;
+      const pool = this.getPool();
+      const res = await pool.query("SELECT 1 as alive");
+      return Array.isArray(res.rows) && res.rows.length > 0;
     } catch {
       return false;
     }

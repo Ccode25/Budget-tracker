@@ -20,7 +20,7 @@ async function runMigrations() {
   const pool = new Pool({ connectionString: databaseUrl });
 
   const migrationsDir = path.join(process.cwd(), "src", "database", "migrations");
-  const migrationFiles = ["0007_neon_postgres_init.sql"];
+  const migrationFiles = ["0007_neon_postgres_init.sql", "0008_auth_schema.sql"];
 
   try {
     const client = await pool.connect();

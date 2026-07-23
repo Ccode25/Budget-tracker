@@ -14,6 +14,8 @@ export class UserRepository {
       email: "user@example.com",
       name: "Alex Johnson",
       avatarUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150",
+      role: "user",
+      emailVerified: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       deletedAt: null,

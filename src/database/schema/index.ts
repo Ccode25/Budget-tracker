@@ -15,10 +15,29 @@ export interface BaseEntitySchema {
   deletedAt?: string | null;
 }
 
+export type UserRole = "user" | "admin";
+
 export interface UserSchema extends BaseEntitySchema {
   email: string;
   name: string;
   avatarUrl?: string;
+  passwordHash?: string | null;
+  role: UserRole;
+  emailVerified: boolean;
+  googleId?: string | null;
+  resetTokenHash?: string | null;
+  resetTokenExpires?: string | null;
+}
+
+export interface RefreshTokenSchema {
+  id: string;
+  uuid: string;
+  userId: string;
+  tokenHash: string;
+  familyId: string;
+  isRevoked: boolean;
+  expiresAt: string;
+  createdAt: string;
 }
 
 export interface AccountSchema extends BaseEntitySchema {
