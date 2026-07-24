@@ -1,13 +1,14 @@
 /**
  * Onboarding Service
  * Single source of truth for initializing a new user account.
- * Runs all onboarding steps inside a database transaction.
+ * Runs all onboarding steps inside a database transaction on Neon PostgreSQL.
  * Idempotent - skips steps that already exist for the user.
  */
 
 import { dbClient } from '@/database/client';
 import { categoryRepository } from '@/repositories/category.repository';
 import { settingsRepository } from '@/repositories/settings.repository';
+import { PoolClient } from '@neondatabase/serverless';
 
 export interface OnboardingResult {
   success: boolean;
@@ -43,22 +44,11 @@ export class OnboardingService {
     }
 
     try {
-      const pool = (dbClient as any).pool;
-      if (!pool) {
-        return await this.initializeNewUserWithoutTransaction(userId);
-      }
-
-      const client = await pool.connect();
-      try {
-        await client.query('BEGIN');
-
+      return await dbClient.transaction(async (client: PoolClient) => {
         const categoriesCreated = await this.seedCategoriesInTransaction(client, userId);
         await this.seedSettingsInTransaction(client, userId);
         await this.seedPreferencesInTransaction(client, userId);
         await this.seedDashboardConfigInTransaction(client, userId);
-        await this.seedStarterRecordsInTransaction(client, userId);
-
-        await client.query('COMMIT');
 
         return {
           success: true,
@@ -66,28 +56,11 @@ export class OnboardingService {
           categoriesCreated,
           settingsCreated: true,
         };
-      } catch (txErr) {
-        await client.query('ROLLBACK');
-        console.error('[OnboardingService] Transaction failed for user ' + userId + ':', txErr);
-        return {
-          success: false,
-          userId,
-          categoriesCreated: 0,
-          settingsCreated: false,
-          error: txErr instanceof Error ? txErr.message : 'Unknown transaction error',
-        };
-      } finally {
-        client.release();
-      }
+      });
     } catch (err) {
-      console.error('[OnboardingService] Failed to initialize user ' + userId + ':', err);
-      return {
-        success: false,
-        userId,
-        categoriesCreated: 0,
-        settingsCreated: false,
-        error: err instanceof Error ? err.message : 'Unknown onboarding error',
-      };
+      console.error('[OnboardingService] Transaction failed for user ' + userId + ':', err);
+      // Fallback to non-transaction initialization
+      return await this.initializeNewUserWithoutTransaction(userId);
     }
   }
 
@@ -114,7 +87,7 @@ export class OnboardingService {
     }
   }
 
-  private async seedCategoriesInTransaction(client: any, userId: string): Promise<number> {
+  private async seedCategoriesInTransaction(client: PoolClient, userId: string): Promise<number> {
     const { MOCK_CATEGORIES } = await import('@/features/categories/mock/categories');
     let createdCount = 0;
 
@@ -124,7 +97,7 @@ export class OnboardingService {
         'INSERT INTO categories (id, uuid, user_id, name, color, icon, type, is_default, is_active, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, true, true, NOW(), NOW()) ON CONFLICT (id) DO NOTHING',
         [catId, 'uuid-' + catId + '-' + userId.slice(-6), userId, cat.name, cat.color, cat.icon, cat.type]
       );
-      if (result.rowCount !== undefined && result.rowCount > 0) {
+      if (result.rowCount !== undefined && result.rowCount !== null && result.rowCount > 0) {
         createdCount++;
       }
     }
@@ -132,38 +105,54 @@ export class OnboardingService {
     return createdCount;
   }
 
-  private async seedSettingsInTransaction(client: any, userId: string): Promise<void> {
+  private async seedSettingsInTransaction(client: PoolClient, userId: string): Promise<void> {
     const { DEFAULT_SETTINGS } = await import('@/types/settings');
 
     const id = 'set-' + Date.now();
     const uuid = 'set-uuid-' + Date.now();
 
     await client.query(
-      'INSERT INTO settings (id, uuid, user_id, currency, currency_symbol, language, date_format, number_format, import_preferences, created_at, updated_at) VALUES (\, \, \, \, \, \, \, \, \, NOW(), NOW()) ON CONFLICT (user_id) DO NOTHING',
-      [id, uuid, userId, DEFAULT_SETTINGS.currency, DEFAULT_SETTINGS.currencySymbol, DEFAULT_SETTINGS.language, DEFAULT_SETTINGS.dateFormat, DEFAULT_SETTINGS.numberFormat, JSON.stringify(DEFAULT_SETTINGS.importPreferences)]
+      `INSERT INTO settings (id, uuid, user_id, currency, currency_symbol, language, date_format, number_format, import_preferences, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW(), NOW())
+       ON CONFLICT (user_id) DO NOTHING`,
+      [
+        id,
+        uuid,
+        userId,
+        DEFAULT_SETTINGS.currency,
+        DEFAULT_SETTINGS.currencySymbol,
+        DEFAULT_SETTINGS.language,
+        DEFAULT_SETTINGS.dateFormat,
+        DEFAULT_SETTINGS.numberFormat,
+        JSON.stringify(DEFAULT_SETTINGS.importPreferences),
+      ]
     );
   }
 
-  private async seedPreferencesInTransaction(client: any, userId: string): Promise<void> {
+  private async seedPreferencesInTransaction(client: PoolClient, userId: string): Promise<void> {
     const { DEFAULT_SETTINGS } = await import('@/types/settings');
 
     await client.query(
-      'UPDATE settings SET import_preferences = \, updated_at = NOW() WHERE user_id = ',
+      `UPDATE settings SET import_preferences = $1, updated_at = NOW() WHERE user_id = $2`,
       [JSON.stringify(DEFAULT_SETTINGS.importPreferences), userId]
     );
   }
 
-  private async seedDashboardConfigInTransaction(client: any, userId: string): Promise<void> {
+  private async seedDashboardConfigInTransaction(client: PoolClient, userId: string): Promise<void> {
     const dashboardId = 'dash-' + userId.slice(-8) + '-' + Date.now();
 
     await client.query(
-      'INSERT INTO dashboard_config (id, uuid, user_id, layout, widgets, created_at, updated_at) VALUES (\, \, \, \, \, NOW(), NOW()) ON CONFLICT (user_id) DO NOTHING',
-      [dashboardId, 'uuid-' + dashboardId, userId, JSON.stringify({ columns: 2, layout: 'default' }), JSON.stringify(['budgetOverview', 'recentTransactions', 'goals', 'categories'])]
+      `INSERT INTO dashboard_config (id, uuid, user_id, layout, widgets, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+       ON CONFLICT (user_id) DO NOTHING`,
+      [
+        dashboardId,
+        'uuid-' + dashboardId,
+        userId,
+        JSON.stringify({ columns: 2, layout: 'default' }),
+        JSON.stringify(['budgetOverview', 'recentTransactions', 'goals', 'categories']),
+      ]
     );
-  }
-
-  private async seedStarterRecordsInTransaction(client: any, userId: string): Promise<void> {
-    // Placeholder for any additional starter records
   }
 }
 

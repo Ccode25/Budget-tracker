@@ -3,7 +3,6 @@ import { dbClient } from "../database/client";
 
 export class TransactionRepository {
   private static instance: TransactionRepository;
-  private transactions: Transaction[] = [];
 
   public static getInstance(): TransactionRepository {
     if (!TransactionRepository.instance) {
@@ -23,6 +22,9 @@ export class TransactionRepository {
     pageSize = 20
   ): Promise<{ data: Transaction[]; total: number }> {
     const t0 = Date.now();
+    const MAX_PAGE_SIZE = 100;
+    const effectivePageSize = Math.min(pageSize, MAX_PAGE_SIZE);
+
     try {
       let queryStr = "SELECT * FROM transactions WHERE user_id = $1 AND deleted_at IS NULL";
       const params: any[] = [userId];
@@ -40,8 +42,8 @@ export class TransactionRepository {
       const countRes = await dbClient.query<{ count: string }>(`SELECT COUNT(*) as count FROM (${queryStr}) as filtered`, params);
       const total = parseInt(countRes[0]?.count || "0", 10);
 
-      const offset = (page - 1) * pageSize;
-      params.push(pageSize, offset);
+      const offset = (page - 1) * effectivePageSize;
+      params.push(effectivePageSize, offset);
       queryStr += ` ORDER BY date DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
       const rows = await dbClient.query<any>(queryStr, params);

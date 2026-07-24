@@ -3,12 +3,13 @@
  * Manages Neon Serverless Postgres SQL connections and health checks via Pool.
  */
 
-import { Pool } from "@neondatabase/serverless";
+import { Pool, PoolClient } from "@neondatabase/serverless";
 import { dbConfig } from "../config/db";
 
 export interface DatabaseClient {
   isReady: boolean;
   query<T = any>(sql: string, params?: any[]): Promise<T[]>;
+  transaction<T = any>(callback: (client: PoolClient) => Promise<T>): Promise<T>;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   healthCheck(): Promise<boolean>;
@@ -18,7 +19,7 @@ class NeonDatabaseClient implements DatabaseClient {
   public isReady = false;
   private pool: Pool | null = null;
 
-  private getPool(): Pool {
+  public getPool(): Pool {
     if (!this.pool) {
       if (!dbConfig.dbUrl) {
         throw new Error("DATABASE_URL is not defined in environment variables.");
@@ -69,6 +70,22 @@ class NeonDatabaseClient implements DatabaseClient {
     } catch (err) {
       console.error("[Neon DB Client Query Error]", err);
       throw err;
+    }
+  }
+
+  async transaction<T = any>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
+    const pool = this.getPool();
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const result = await callback(client);
+      await client.query("COMMIT");
+      return result;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
     }
   }
 

@@ -20,7 +20,12 @@ async function runMigrations() {
   const pool = new Pool({ connectionString: databaseUrl });
 
   const migrationsDir = path.join(process.cwd(), "src", "database", "migrations");
-  const migrationFiles = ["0007_neon_postgres_init.sql", "0008_auth_schema.sql", "0009_nextauth_neon_schema.sql"];
+  const migrationFiles = [
+    "0007_neon_postgres_init.sql",
+    "0008_auth_schema.sql",
+    "0009_nextauth_neon_schema.sql",
+    "0010_dashboard_config.sql",
+  ];
 
   try {
     const client = await pool.connect();
@@ -34,7 +39,7 @@ async function runMigrations() {
       }
     }
     client.release();
-    console.log("\n🎉 Database migration complete! All 8 tables and indexes are ready on Neon Postgres.");
+    console.log("\n🎉 Database migration complete! All tables and indexes are ready on Neon Postgres.");
   } catch (err) {
     console.error("❌ Migration failed:", err);
   } finally {

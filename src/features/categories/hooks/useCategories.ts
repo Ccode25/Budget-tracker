@@ -9,53 +9,45 @@ export interface UseCategoriesOptions {
 
 export function useCategories(options?: UseCategoriesOptions) {
   const { initialCategories } = options ?? {};
-  const isAuthenticated = initialCategories !== undefined;
 
   const [categories, setCategories] = useState<Category[]>(
-    initialCategories ?? []
+    initialCategories && initialCategories.length > 0 ? initialCategories : MOCK_CATEGORIES
   );
 
   useEffect(() => {
-    if (isAuthenticated && initialCategories === undefined) {
-      fetch("/api/categories")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.data) {
-            setCategories(data.data);
-          }
-        })
-        .catch((err) => console.error("Failed to fetch user categories", err));
-    } else if (!isAuthenticated && typeof window !== "undefined") {
-      const storedUser = window.localStorage.getItem("budget_tracker_user");
-      if (storedUser) {
-        try {
-          const u = JSON.parse(storedUser);
-          if (u?.isDemo) setCategories(MOCK_CATEGORIES);
-        } catch {
-          setCategories([]);
+    let isMounted = true;
+    fetch("/api/categories")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data?.data && Array.isArray(data.data) && data.data.length > 0) {
+          setCategories(data.data);
         }
-      }
-    }
-  }, [isAuthenticated, initialCategories]);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch user categories:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [initialCategories]);
 
   const addCategory = async (category: Omit<Category, "id">) => {
-    if (isAuthenticated) {
-      try {
-        const res = await fetch("/api/categories", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(category),
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data?.data) {
-            setCategories((prev) => [data.data, ...prev]);
-            return;
-          }
+    try {
+      const res = await fetch("/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(category),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.data) {
+          setCategories((prev) => [data.data, ...prev]);
+          return;
         }
-      } catch (err) {
-        console.error("Failed to create category", err);
       }
+    } catch (err) {
+      console.error("Failed to create category:", err);
     }
 
     const newCat: Category = {
@@ -71,23 +63,22 @@ export function useCategories(options?: UseCategoriesOptions) {
       previous = prev;
       return prev.map((c) => (c.id === id ? { ...c, ...updates } : c));
     });
-    if (isAuthenticated) {
-      try {
-        const res = await fetch(`/api/categories/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(updates),
-        });
-        if (!res.ok) {
-          setCategories(previous);
-          const data = await res.json().catch(() => ({}));
-          toast.error(data.error || "Failed to update category");
-        }
-      } catch (err) {
+
+    try {
+      const res = await fetch(`/api/categories/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) {
         setCategories(previous);
-        console.error("Failed to update category:", err);
-        toast.error("Network error while updating category");
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to update category");
       }
+    } catch (err) {
+      setCategories(previous);
+      console.error("Failed to update category:", err);
+      toast.error("Network error while updating category");
     }
   };
 

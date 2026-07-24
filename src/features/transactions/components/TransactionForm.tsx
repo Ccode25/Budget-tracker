@@ -49,6 +49,7 @@ export function TransactionForm({
     register,
     handleSubmit,
     watch,
+    setValue,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
@@ -62,31 +63,46 @@ export function TransactionForm({
   });
 
   const selectedType = watch("type");
+  const selectedCategoryId = watch("categoryId");
+
   const filteredCategories = categories.filter(
     (c) => c.type === selectedType || c.type === "both"
   );
 
-  // Populate when editing
+  // Auto-select valid category whenever categories or transaction type changes
   useEffect(() => {
-    if (transaction) {
-      reset({
-        date: transaction.date,
-        description: transaction.description,
-        amount: transaction.amount,
-        type: transaction.type,
-        categoryId: transaction.categoryId,
-        status: transaction.status,
-        notes: transaction.notes ?? "",
-      });
-    } else {
-      reset({
-        date: new Date().toISOString().slice(0, 10),
-        type: "expense",
-        status: "completed",
-        categoryId: "cat-food",
-        description: "",
-        notes: "",
-      });
+    if (filteredCategories.length > 0) {
+      const isValid = filteredCategories.some((c) => c.id === selectedCategoryId);
+      if (!isValid) {
+        setValue("categoryId", filteredCategories[0].id, { shouldValidate: true });
+      }
+    }
+  }, [selectedType, filteredCategories, selectedCategoryId, setValue]);
+
+  // Populate form when editing or opening
+  useEffect(() => {
+    if (open) {
+      if (transaction) {
+        reset({
+          date: transaction.date,
+          description: transaction.description,
+          amount: transaction.amount,
+          type: transaction.type,
+          categoryId: transaction.categoryId,
+          status: transaction.status,
+          notes: transaction.notes ?? "",
+        });
+      } else {
+        const defaultCatId = filteredCategories[0]?.id || "cat-food";
+        reset({
+          date: new Date().toISOString().slice(0, 10),
+          type: "expense",
+          status: "completed",
+          categoryId: defaultCatId,
+          description: "",
+          notes: "",
+        });
+      }
     }
   }, [transaction, reset, open]);
 
@@ -181,11 +197,17 @@ export function TransactionForm({
               className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               aria-invalid={!!errors.categoryId}
             >
-              {filteredCategories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
+              {filteredCategories.length === 0 ? (
+                <option value="" disabled>
+                  No categories available
                 </option>
-              ))}
+              ) : (
+                filteredCategories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))
+              )}
             </select>
             {errors.categoryId && (
               <p className="text-xs text-destructive">{errors.categoryId.message}</p>

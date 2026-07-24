@@ -53,14 +53,14 @@ export class AuthRepository {
     const rows = await dbClient.query<UserSchema>(
       `INSERT INTO users (id, uuid, email, name, google_id, email_verified)
        VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id, uuid, email, name, avatar_url as "avatarId", role, email_verified as "emailVerified", created_at as "createdAt"`,
+       RETURNING id, uuid, email, name, avatar_url as "avatarUrl", role, email_verified as "emailVerified", created_at as "createdAt"`,
       [
         data.id,
         data.uuid,
         data.email.toLowerCase(),
         data.name,
         data.googleId || null,
-        data.emailVerified ?? false,
+        data.emailVerified ?? true,
       ]
     );
     return rows[0];
