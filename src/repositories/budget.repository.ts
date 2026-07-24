@@ -23,6 +23,9 @@ export class BudgetRepository {
 
       if (budgetRows.length === 0) return [];
 
+      const budgetQueryMs = Date.now();
+      console.log(`[profile] budget repo main query: ${Date.now() - budgetQueryMs}ms rows=${budgetRows.length}`);
+
       let transactions: Transaction[];
       if (preFetchedTransactions) {
         transactions = preFetchedTransactions;

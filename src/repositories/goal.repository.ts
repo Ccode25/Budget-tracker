@@ -28,12 +28,15 @@ export class GoalRepository {
   }
 
   async findAll(userId?: string, includeDeleted = false): Promise<GoalSchema[]> {
+    const t0 = Date.now();
     if (userId) {
       try {
         const rows = await dbClient.query<any>(
           `SELECT * FROM goals WHERE user_id = $1 ${includeDeleted ? "" : "AND deleted_at IS NULL"}`,
           [userId]
         );
+        const ms = Date.now() - t0;
+        console.log(`[profile] goals findAll: ${ms}ms rows=${rows.length}`);
         return rows.map((r) => ({
           id: r.id,
           uuid: r.uuid || r.id,
@@ -53,6 +56,8 @@ export class GoalRepository {
         console.error("GoalRepository Neon query error:", err);
       }
     }
+    const ms = Date.now() - t0;
+    console.log(`[profile] goals fallback: ${ms}ms userId=${!!userId}`);
     return userId ? [] : (includeDeleted ? [...this.goals] : this.goals.filter((g) => !g.deletedAt));
   }
 

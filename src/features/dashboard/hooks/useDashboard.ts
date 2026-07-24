@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import type { Transaction } from "@/types/transaction";
 import type { Budget } from "@/types/budget";
@@ -19,21 +18,15 @@ export interface UseDashboardOptions {
 }
 
 export function useDashboard(options?: UseDashboardOptions) {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
-
   const initial = options?.initialData;
-  const hasServerInitialData =
-    (initial?.transactions?.length ?? 0) > 0 ||
-    (initial?.budgets?.length ?? 0) > 0 ||
-    (initial?.goals?.length ?? 0) > 0;
+  const isAuthenticated = initial !== undefined;
 
   const [dbData, setDbData] = useState<{
     transactions: Transaction[];
     budgets: Budget[];
     goals: any[];
   }>(() => {
-    if (hasServerInitialData) {
+    if (isAuthenticated) {
       return {
         transactions: initial?.transactions ?? [],
         budgets: initial?.budgets ?? [],
@@ -61,7 +54,7 @@ export function useDashboard(options?: UseDashboardOptions) {
   );
 
   useEffect(() => {
-    if (isAuthenticated && (dbData.transactions.length === 0 || !hasServerInitialData)) {
+    if (!isAuthenticated) {
       fetch("/api/dashboard")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
@@ -81,7 +74,7 @@ export function useDashboard(options?: UseDashboardOptions) {
         })
         .catch((err) => console.error("Failed to fetch authenticated dashboard data", err));
     }
-  }, [isAuthenticated, hasServerInitialData, dbData.transactions.length]);
+  }, [isAuthenticated]);
 
   // Determine active transactions: Server DB data if authenticated; Demo data only if in demo mode
   const allTransactions = useMemo(() => {

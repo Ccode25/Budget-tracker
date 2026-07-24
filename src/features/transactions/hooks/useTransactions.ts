@@ -1,5 +1,4 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { toast } from "sonner";
 import { DEMO_TRANSACTIONS } from "../mock/transactions";
@@ -43,10 +42,8 @@ export interface UseTransactionsOptions {
 }
 
 export function useTransactions(options?: UseTransactionsOptions) {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
-
   const { initialTransactions } = options ?? {};
+  const isAuthenticated = initialTransactions !== undefined;
 
   const [dbTransactions, setDbTransactions] = useState<Transaction[]>(
     initialTransactions ?? []

@@ -14,12 +14,15 @@ export class SettingsRepository {
   }
 
   async getByUserId(userId: string): Promise<SettingsSchema> {
+    const t0 = Date.now();
     try {
       const rows = await dbClient.query<any>(
         "SELECT * FROM settings WHERE user_id = $1 AND deleted_at IS NULL LIMIT 1",
         [userId]
       );
       if (rows.length > 0) {
+        const ms = Date.now() - t0;
+        console.log(`[profile] settings getByUserId: ${ms}ms`);
         const r = rows[0];
         return {
           id: r.id,
@@ -37,6 +40,8 @@ export class SettingsRepository {
         };
       }
 
+      const ms = Date.now() - t0;
+      console.log(`[profile] settings insert missing: ${ms}ms`);
       // Auto-create default settings in Neon DB for new user
       const id = `set-${Date.now()}`;
       const uuid = `set-uuid-${Date.now()}`;

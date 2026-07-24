@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { MOCK_CATEGORIES } from "../mock/categories";
 import type { Category } from "@/types/category";
@@ -9,9 +8,8 @@ export interface UseCategoriesOptions {
 }
 
 export function useCategories(options?: UseCategoriesOptions) {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
   const { initialCategories } = options ?? {};
+  const isAuthenticated = initialCategories !== undefined;
 
   const [categories, setCategories] = useState<Category[]>(
     initialCategories ?? []

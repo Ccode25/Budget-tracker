@@ -22,6 +22,7 @@ export class TransactionRepository {
     page = 1,
     pageSize = 20
   ): Promise<{ data: Transaction[]; total: number }> {
+    const t0 = Date.now();
     try {
       let queryStr = "SELECT * FROM transactions WHERE user_id = $1 AND deleted_at IS NULL";
       const params: any[] = [userId];
@@ -62,6 +63,8 @@ export class TransactionRepository {
     } catch (err) {
       console.error("TransactionRepository Neon query error:", err);
       return { data: [], total: 0 };
+    } finally {
+      console.log(`[profile] tx findAll total: ${Date.now() - t0}ms`);
     }
   }
 
@@ -69,11 +72,14 @@ export class TransactionRepository {
    * Fast, unpaginated single-query retrieval of all non-deleted transactions for a user
    */
   async findAllUserTransactions(userId: string): Promise<Transaction[]> {
+    const t0 = Date.now();
     try {
       const rows = await dbClient.query<any>(
         "SELECT * FROM transactions WHERE user_id = $1 AND deleted_at IS NULL ORDER BY date DESC",
         [userId]
       );
+      const ms = Date.now() - t0;
+      console.log(`[profile] tx findAllUserTransactions: ${ms}ms rows=${rows.length}`);
       return rows.map((r) => ({
         id: r.id,
         date: r.date,

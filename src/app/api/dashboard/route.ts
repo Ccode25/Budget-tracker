@@ -17,18 +17,14 @@ export async function GET() {
   const userId = (session.user as any).id || session.user.email;
 
   try {
-    // Single parallel batch for all independent DB reads
-    const [transactions, goals, categories, settings] = await Promise.all([
+    const [transactions, goals, categories] = await Promise.all([
       transactionRepository.findAllUserTransactions(userId),
       goalRepository.findAll(userId),
       categoryRepository.findAll(userId),
-      settingsRepository.getByUserId(userId),
     ]);
 
-    // Compute budgets in memory using pre-fetched transactions (0 additional DB queries)
     const budgets = await budgetRepository.findAll(userId, transactions);
 
-    // Auto-seed default categories in background if empty
     if (categories.length === 0) {
       categoryRepository.seedDefaultCategories(userId).catch(() => {});
     }
@@ -53,7 +49,6 @@ export async function GET() {
       budgets,
       goals: formattedGoals,
       categories,
-      settings,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to fetch user data" }, { status: 500 });

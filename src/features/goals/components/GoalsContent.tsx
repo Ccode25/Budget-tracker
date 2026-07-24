@@ -25,8 +25,6 @@ import { PageWrapper } from "@/components/layout/PageWrapper";
 import { SAVINGS_GOALS } from "@/features/analytics/mock/analytics";
 import { cn } from "@/lib/utils";
 
-import { useSession } from "next-auth/react";
-
 export interface GoalItem {
   id: string;
   name: string;
@@ -60,8 +58,7 @@ export function GoalsContent({
 }: {
   initialGoals?: GoalItem[];
 }) {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
+  const isAuthenticated = initialGoals !== undefined;
 
   const [mounted, setMounted] = useState(false);
   const [goals, setGoals] = useState<GoalItem[]>(initialGoals ?? []);

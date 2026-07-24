@@ -65,6 +65,7 @@ export class CategoryRepository {
   }
 
   async findAll(userId?: string): Promise<Category[]> {
+    const t0 = Date.now();
     try {
       const queryStr = userId
         ? "SELECT * FROM categories WHERE (user_id = $1 OR user_id IS NULL) AND deleted_at IS NULL"
@@ -72,6 +73,8 @@ export class CategoryRepository {
       const params = userId ? [userId] : [];
 
       const rows = await dbClient.query<any>(queryStr, params);
+      const ms = Date.now() - t0;
+      console.log(`[profile] categories findAll: ${ms}ms rows=${rows.length}`);
       return rows.map((r) => ({
         id: r.id,
         name: r.name,

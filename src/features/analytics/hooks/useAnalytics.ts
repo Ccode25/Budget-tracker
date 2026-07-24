@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useSession } from "next-auth/react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { DEMO_TRANSACTIONS } from "@/features/transactions/mock/transactions";
 import { MOCK_CATEGORIES } from "@/features/categories/mock/categories";
@@ -13,10 +12,8 @@ export interface UseAnalyticsOptions {
 }
 
 export function useAnalytics(options?: UseAnalyticsOptions) {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
-
   const { initialTransactions } = options ?? {};
+  const isAuthenticated = initialTransactions !== undefined;
 
   const [dbTransactions, setDbTransactions] = useState<Transaction[]>(
     initialTransactions ?? []

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { MOCK_BUDGETS } from "../mock/budgets";
 import { getCategoryName, getCategoryColor } from "@/features/categories/mock/categories";
@@ -15,9 +14,8 @@ export interface UseBudgetsOptions {
 }
 
 export function useBudgets(options?: UseBudgetsOptions) {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
   const { initialBudgets, initialTransactions } = options ?? {};
+  const isAuthenticated = initialBudgets !== undefined || initialTransactions !== undefined;
 
   const [budgets, setBudgets] = useState<Budget[]>(initialBudgets ?? []);
   const [transactions, setTransactions] = useState<Transaction[]>(initialTransactions ?? []);
