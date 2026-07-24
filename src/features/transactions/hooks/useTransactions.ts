@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
+import { toast } from "sonner";
 import { DEMO_TRANSACTIONS } from "../mock/transactions";
 import { getCategoryName, getCategoryColor } from "@/features/categories/mock/categories";
 import type {
@@ -37,23 +38,33 @@ function enrichTransaction(t: Transaction): EnrichedTransaction {
   };
 }
 
-export function useTransactions() {
+export interface UseTransactionsOptions {
+  initialTransactions?: Transaction[];
+}
+
+export function useTransactions(options?: UseTransactionsOptions) {
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
+
+  const { initialTransactions } = options ?? {};
+
+  const [dbTransactions, setDbTransactions] = useState<Transaction[]>(
+    initialTransactions ?? []
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [demoTransactions, setDemoTransactions] = useLocalStorage<Transaction[]>(
+    "budget_tracker_transactions",
+    []
+  );
 
   const [filters, setFilters] = useState<TransactionFilters>(EMPTY_FILTERS);
   const [sort, setSort] = useState<TransactionSort>({ field: "date", direction: "desc" });
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
-  const [dbTransactions, setDbTransactions] = useState<Transaction[]>([]);
-  const [demoTransactions, setDemoTransactions] = useLocalStorage<Transaction[]>(
-    "budget_tracker_transactions",
-    []
-  );
-
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && initialTransactions === undefined) {
+      setIsLoading(true);
       fetch("/api/transactions")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
@@ -61,9 +72,12 @@ export function useTransactions() {
             setDbTransactions(data.data);
           }
         })
-        .catch((err) => console.error("Failed to fetch transactions", err));
+        .catch((err) => console.error("Failed to fetch transactions", err))
+        .finally(() => setIsLoading(false));
+    } else {
+      setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, initialTransactions]);
 
   const activeTransactions = useMemo(() => {
     if (isAuthenticated) return dbTransactions;
@@ -217,17 +231,26 @@ export function useTransactions() {
   const updateTransaction = useCallback(
     async (id: string, updates: Partial<Transaction>) => {
       if (isAuthenticated) {
-        setDbTransactions((prev) =>
-          prev.map((t) => (t.id === id ? { ...t, ...updates } : t))
-        );
+        let previous: Transaction[] = [];
+        setDbTransactions((prev) => {
+          previous = prev;
+          return prev.map((t) => (t.id === id ? { ...t, ...updates } : t));
+        });
         try {
-          await fetch(`/api/transactions/${id}`, {
+          const res = await fetch(`/api/transactions/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(updates),
           });
+          if (!res.ok) {
+            setDbTransactions(previous);
+            const data = await res.json().catch(() => ({}));
+            toast.error(data.error || "Failed to update transaction");
+          }
         } catch (err) {
+          setDbTransactions(previous);
           console.error("Failed to update transaction in database:", err);
+          toast.error("Network error while updating transaction");
         }
         return;
       }
@@ -241,14 +264,25 @@ export function useTransactions() {
   const deleteTransaction = useCallback(
     async (id: string) => {
       if (isAuthenticated) {
-        setDbTransactions((prev) => prev.filter((t) => t.id !== id));
+        let previous: Transaction[] = [];
+        setDbTransactions((prev) => {
+          previous = prev;
+          return prev.filter((t) => t.id !== id);
+        });
         if (selectedId === id) setSelectedId(null);
         try {
-          await fetch(`/api/transactions/${id}`, {
+          const res = await fetch(`/api/transactions/${id}`, {
             method: "DELETE",
           });
+          if (!res.ok) {
+            setDbTransactions(previous);
+            const data = await res.json().catch(() => ({}));
+            toast.error(data.error || "Failed to delete transaction");
+          }
         } catch (err) {
+          setDbTransactions(previous);
           console.error("Failed to delete transaction from database:", err);
+          toast.error("Network error while deleting transaction");
         }
         return;
       }
@@ -297,5 +331,7 @@ export function useTransactions() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
+    // Loading
+    isLoading,
   };
 }

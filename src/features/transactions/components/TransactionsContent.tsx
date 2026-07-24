@@ -15,7 +15,11 @@ import { TransactionForm } from "./TransactionForm";
 import { TransactionDetail } from "./TransactionDetail";
 import type { Transaction } from "@/types/transaction";
 
-export function TransactionsContent() {
+export function TransactionsContent({
+  initialTransactions,
+}: {
+  initialTransactions?: Transaction[];
+}) {
   const {
     transactions,
     totalCount,
@@ -35,7 +39,8 @@ export function TransactionsContent() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
-  } = useTransactions();
+    isLoading,
+  } = useTransactions({ initialTransactions });
 
   const [formOpen, setFormOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -129,6 +134,7 @@ export function TransactionsContent() {
           onEdit={handleOpenEdit}
           onDelete={deleteTransaction}
           selectedId={selectedId}
+          isLoading={isLoading}
         />
 
         {/* Pagination */}

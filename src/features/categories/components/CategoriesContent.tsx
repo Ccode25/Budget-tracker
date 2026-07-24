@@ -8,9 +8,14 @@ import { PageWrapper } from "@/components/layout/PageWrapper";
 import { useCategories } from "../hooks/useCategories";
 import { CategoryCard } from "./CategoryCard";
 import { CategoryForm } from "./CategoryForm";
+import type { Category } from "@/types/category";
 
-export function CategoriesContent() {
-  const { categories, addCategory } = useCategories();
+export function CategoriesContent({
+  initialCategories,
+}: {
+  initialCategories?: Category[];
+}) {
+  const { categories, addCategory } = useCategories({ initialCategories });
   const [formOpen, setFormOpen] = useState(false);
 
   const expenseCategories = categories.filter((c) => c.type === "expense");

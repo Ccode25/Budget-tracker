@@ -1,10 +1,11 @@
 "use client";
 
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Calendar, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import type { Budget } from "@/types/budget";
+import { format } from "date-fns";
+import type { Budget, BudgetStatus } from "@/types/budget";
 import { cn } from "@/lib/utils";
 
 interface BudgetCardProps {
@@ -15,32 +16,51 @@ interface BudgetCardProps {
 }
 
 export function BudgetCard({ budget, onClick, onEdit, onDelete }: BudgetCardProps) {
-  const pct = budget.totalLimit > 0 ? Math.round((budget.totalSpent / budget.totalLimit) * 100) : 0;
-  const remaining = budget.totalLimit - budget.totalSpent;
-  const isOver = pct >= 90;
+  const amount = budget.amount ?? budget.totalLimit ?? 0;
+  const totalExpenses = budget.totalExpenses ?? budget.totalSpent ?? 0;
+  const remaining = budget.remainingBudget ?? amount - totalExpenses;
+  const spentPct = budget.spentPercentage ?? (amount > 0 ? Math.round((totalExpenses / amount) * 100) : 0);
+  const status: BudgetStatus = budget.status ?? (spentPct > 100 ? "Over Budget" : spentPct > 80 ? "Warning" : "Safe");
+
+  const formatDateRange = (start: string, end: string) => {
+    try {
+      const s = new Date(start + "T00:00:00");
+      const e = new Date(end + "T00:00:00");
+      return `${format(s, "MMM d, yyyy")} – ${format(e, "MMM d, yyyy")}`;
+    } catch {
+      return `${start} – ${end}`;
+    }
+  };
 
   return (
     <Card
-      className="group cursor-pointer transition-all hover:shadow-md border-border"
+      className="group cursor-pointer transition-all hover:shadow-md border-border relative overflow-hidden"
       onClick={onClick}
     >
-      <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
-        <div className="flex items-center gap-2">
-          <span
-            className="h-3 w-3 rounded-full shrink-0"
-            style={{ backgroundColor: budget.color }}
-          />
-          <CardTitle className="text-sm font-semibold text-foreground">{budget.name}</CardTitle>
+      <div className="absolute top-0 left-0 right-0 h-1" style={{ backgroundColor: budget.color || "#7c3aed" }} />
+      <CardHeader className="pb-2 flex-row items-center justify-between space-y-0 pt-4">
+        <div>
+          <CardTitle className="text-base font-semibold text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
+            {budget.name}
+            <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+          </CardTitle>
+          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+            <Calendar size={12} className="shrink-0" />
+            {formatDateRange(budget.startDate, budget.endDate)}
+          </p>
         </div>
         <div className="flex items-center gap-1.5">
-          <Badge variant="outline" className="capitalize text-[10px]">
-            {budget.period}
+          <Badge
+            variant="outline"
+            className={cn(
+              "text-[11px] font-medium px-2 py-0.5 rounded-full border",
+              status === "Over Budget" && "bg-destructive/10 text-destructive border-destructive/20",
+              status === "Warning" && "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:text-amber-400",
+              status === "Safe" && "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
+            )}
+          >
+            {status}
           </Badge>
-          {isOver && (
-            <Badge variant="destructive" className="text-[10px]">
-              Over 90%
-            </Badge>
-          )}
           {onEdit && (
             <button
               type="button"
@@ -48,7 +68,7 @@ export function BudgetCard({ budget, onClick, onEdit, onDelete }: BudgetCardProp
                 e.stopPropagation();
                 onEdit(budget);
               }}
-              className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
               title="Edit Budget"
             >
               <Pencil size={13} />
@@ -61,7 +81,7 @@ export function BudgetCard({ budget, onClick, onEdit, onDelete }: BudgetCardProp
                 e.stopPropagation();
                 onDelete(budget.id);
               }}
-              className="p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+              className="p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
               title="Delete Budget"
             >
               <Trash2 size={13} />
@@ -70,53 +90,56 @@ export function BudgetCard({ budget, onClick, onEdit, onDelete }: BudgetCardProp
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
-        <div className="flex items-end justify-between">
+      <CardContent className="space-y-3">
+        <div className="grid grid-cols-3 gap-2 pt-2 text-center bg-muted/40 p-2.5 rounded-lg border border-border/50">
           <div>
-            <p className="text-2xl font-bold text-foreground">
-              ₱{budget.totalSpent.toLocaleString()}
-            </p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              of ₱{budget.totalLimit.toLocaleString()} limit
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Budget</p>
+            <p className="text-sm font-bold text-foreground mt-0.5">
+              ₱{amount.toLocaleString()}
             </p>
           </div>
-          <div className="text-right">
+          <div>
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Expenses</p>
+            <p className="text-sm font-bold text-foreground mt-0.5">
+              ₱{totalExpenses.toLocaleString()}
+            </p>
+          </div>
+          <div>
+            <p className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Remaining</p>
             <p
               className={cn(
-                "text-sm font-bold",
-                remaining < 0 ? "text-destructive" : "text-emerald-500"
+                "text-sm font-bold mt-0.5",
+                remaining < 0 ? "text-destructive" : "text-emerald-600 dark:text-emerald-400"
               )}
             >
               ₱{remaining.toLocaleString()}
             </p>
-            <p className="text-xs text-muted-foreground">remaining</p>
           </div>
         </div>
 
-        <Progress
-          value={pct}
-          className={cn(
-            "h-2",
-            isOver
-              ? "[&>div]:bg-destructive"
-              : pct >= 75
-              ? "[&>div]:bg-amber-500"
-              : "[&>div]:bg-primary"
-          )}
-        />
-
-        {/* Category preview */}
-        <div className="pt-2 border-t border-border flex items-center justify-between text-xs text-muted-foreground">
-          <span>{budget.categories.length} categories</span>
-          <span>
-            Target: {new Date(budget.endDate).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </span>
+        <div className="space-y-1.5">
+          <div className="flex justify-between text-xs font-medium">
+            <span className="text-muted-foreground">Progress</span>
+            <span className={cn(
+              status === "Over Budget" ? "text-destructive" : status === "Warning" ? "text-amber-600 dark:text-amber-400" : "text-foreground"
+            )}>
+              {Math.round(spentPct)}% spent
+            </span>
+          </div>
+          <Progress
+            value={Math.min(spentPct, 100)}
+            className={cn(
+              "h-2",
+              status === "Over Budget"
+                ? "[&>div]:bg-destructive"
+                : status === "Warning"
+                ? "[&>div]:bg-amber-500"
+                : "[&>div]:bg-emerald-500"
+            )}
+          />
         </div>
       </CardContent>
     </Card>
   );
 }
+

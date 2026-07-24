@@ -6,6 +6,7 @@ import { Container } from "@/components/layout/Container";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { useAnalytics } from "../hooks/useAnalytics";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Transaction } from "@/types/transaction";
 
 const IncomeExpenseChart = dynamic(
   () => import("./IncomeExpenseChart"),
@@ -17,8 +18,12 @@ const ExpenseBreakdownChart = dynamic(
   { ssr: false, loading: () => <Skeleton className="h-72 w-full rounded-xl" /> }
 );
 
-export function AnalyticsContent() {
-  const { monthlyTrends, categoryBreakdown, summary } = useAnalytics();
+export function AnalyticsContent({
+  initialTransactions,
+}: {
+  initialTransactions?: Transaction[];
+}) {
+  const { monthlyTrends, categoryBreakdown, summary } = useAnalytics({ initialTransactions });
 
   return (
     <PageWrapper>

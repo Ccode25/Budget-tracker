@@ -95,11 +95,68 @@ export class GoalRepository {
   }
 
   async update(id: string, updates: Partial<GoalSchema>, userId?: string): Promise<GoalSchema | null> {
-    const index = this.goals.findIndex((g) => g.id === id && !g.deletedAt);
-    if (index !== -1) {
-      this.goals[index] = { ...this.goals[index], ...updates };
+    try {
+      if (userId) {
+        const setClauses: string[] = [];
+        const params: any[] = [id];
+        let idx = 2;
+
+        if (updates.name !== undefined) {
+          setClauses.push(`name = $${idx++}`);
+          params.push(updates.name);
+        }
+        if (updates.targetAmount !== undefined) {
+          setClauses.push(`target_amount = $${idx++}`);
+          params.push(updates.targetAmount);
+        }
+        if (updates.savedAmount !== undefined) {
+          setClauses.push(`saved_amount = $${idx++}`);
+          params.push(updates.savedAmount);
+        }
+        if (updates.deadline !== undefined) {
+          setClauses.push(`deadline = $${idx++}`);
+          params.push(updates.deadline);
+        }
+        if (updates.color !== undefined) {
+          setClauses.push(`color = $${idx++}`);
+          params.push(updates.color);
+        }
+        if (updates.icon !== undefined) {
+          setClauses.push(`icon = $${idx++}`);
+          params.push(updates.icon);
+        }
+        if (updates.isCompleted !== undefined) {
+          setClauses.push(`is_completed = $${idx++}`);
+          params.push(updates.isCompleted);
+        }
+
+        setClauses.push(`updated_at = NOW()`);
+        params.push(userId);
+        const sql = `UPDATE goals SET ${setClauses.join(", ")} WHERE id = $1 AND user_id = $${idx} RETURNING *`;
+        const rows = await dbClient.query<any>(sql, params);
+        if (rows.length > 0) {
+          const r = rows[0];
+          return {
+            id: r.id,
+            uuid: r.uuid || r.id,
+            userId: r.user_id,
+            name: r.name,
+            targetAmount: parseFloat(r.target_amount || 0),
+            savedAmount: parseFloat(r.saved_amount || 0),
+            deadline: r.deadline ? new Date(r.deadline).toISOString() : new Date().toISOString(),
+            color: r.color || "#10b981",
+            icon: r.icon || "PiggyBank",
+            isCompleted: r.is_completed || false,
+            createdAt: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+            updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : new Date().toISOString(),
+            deletedAt: r.deleted_at ? new Date(r.deleted_at).toISOString() : null,
+          };
+        }
+      }
+    } catch (err) {
+      console.error("GoalRepository Neon update error:", err);
     }
-    return this.findById(id, userId);
+    return null;
   }
 
   async softDelete(id: string, userId?: string): Promise<boolean> {

@@ -8,18 +8,26 @@ import { MOCK_CATEGORIES } from "@/features/categories/mock/categories";
 import type { Transaction } from "@/types/transaction";
 import type { MonthlyData, CategoryBreakdown } from "@/types/analytics";
 
-export function useAnalytics() {
+export interface UseAnalyticsOptions {
+  initialTransactions?: Transaction[];
+}
+
+export function useAnalytics(options?: UseAnalyticsOptions) {
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
 
-  const [dbTransactions, setDbTransactions] = useState<Transaction[]>([]);
+  const { initialTransactions } = options ?? {};
+
+  const [dbTransactions, setDbTransactions] = useState<Transaction[]>(
+    initialTransactions ?? []
+  );
   const [demoTransactions] = useLocalStorage<Transaction[]>(
     "budget_tracker_transactions",
     []
   );
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && initialTransactions === undefined) {
       fetch("/api/transactions")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
@@ -29,7 +37,7 @@ export function useAnalytics() {
         })
         .catch((err) => console.error("Failed to fetch analytics transactions", err));
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, initialTransactions]);
 
   const activeTransactions = useMemo(() => {
     if (isAuthenticated) return dbTransactions;

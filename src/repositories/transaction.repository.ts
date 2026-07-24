@@ -65,6 +65,34 @@ export class TransactionRepository {
     }
   }
 
+  /**
+   * Fast, unpaginated single-query retrieval of all non-deleted transactions for a user
+   */
+  async findAllUserTransactions(userId: string): Promise<Transaction[]> {
+    try {
+      const rows = await dbClient.query<any>(
+        "SELECT * FROM transactions WHERE user_id = $1 AND deleted_at IS NULL ORDER BY date DESC",
+        [userId]
+      );
+      return rows.map((r) => ({
+        id: r.id,
+        date: r.date,
+        description: r.description,
+        amount: parseFloat(r.amount),
+        type: r.type,
+        categoryId: r.category_id,
+        accountId: r.account_id,
+        status: r.status,
+        merchant: r.merchant,
+        notes: r.notes,
+        isImported: r.is_imported,
+      }));
+    } catch (err) {
+      console.error("TransactionRepository findAllUserTransactions error:", err);
+      return [];
+    }
+  }
+
   async findById(id: string, userId: string): Promise<Transaction | null> {
     try {
       const rows = await dbClient.query<any>(

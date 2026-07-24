@@ -17,18 +17,21 @@ export async function GET() {
   const userId = (session.user as any).id || session.user.email;
 
   try {
-    let categories = await categoryRepository.findAll(userId);
-    if (categories.length === 0) {
-      await categoryRepository.seedDefaultCategories(userId);
-      categories = await categoryRepository.findAll(userId);
-    }
-
-    const [{ data: transactions, total }, budgets, goals, settings] = await Promise.all([
-      transactionRepository.findAll(userId),
-      budgetRepository.findAll(userId),
+    // Single parallel batch for all independent DB reads
+    const [transactions, goals, categories, settings] = await Promise.all([
+      transactionRepository.findAllUserTransactions(userId),
       goalRepository.findAll(userId),
+      categoryRepository.findAll(userId),
       settingsRepository.getByUserId(userId),
     ]);
+
+    // Compute budgets in memory using pre-fetched transactions (0 additional DB queries)
+    const budgets = await budgetRepository.findAll(userId, transactions);
+
+    // Auto-seed default categories in background if empty
+    if (categories.length === 0) {
+      categoryRepository.seedDefaultCategories(userId).catch(() => {});
+    }
 
     const formattedGoals = goals.map((g) => {
       const target = parseFloat((g.targetAmount ?? (g as any).target_amount ?? (g as any).target ?? 0).toString());
@@ -46,7 +49,7 @@ export async function GET() {
       user: session.user,
       userId,
       transactions,
-      totalTransactions: total,
+      totalTransactions: transactions.length,
       budgets,
       goals: formattedGoals,
       categories,

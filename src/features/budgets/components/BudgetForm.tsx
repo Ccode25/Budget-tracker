@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,23 +17,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { Budget, BudgetPeriod } from "@/types/budget";
 
-const schema = z.object({
-  name: z.string().min(1, "Name is required"),
-  period: z.enum(["monthly", "annual", "weekly", "custom"]),
-  startDate: z.string().min(1, "Start date required"),
-  endDate: z.string().min(1, "End date required"),
-  totalLimit: z.number().positive("Limit must be positive"),
-  color: z.string(),
-});
+const schema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    period: z.enum(["monthly", "annual", "weekly", "custom"]),
+    startDate: z.string().min(1, "Start date required"),
+    endDate: z.string().min(1, "End date required"),
+    amount: z.number().positive("Budget amount must be positive"),
+    color: z.string(),
+  })
+  .refine((data) => data.startDate <= data.endDate, {
+    message: "Start date must be before or equal to end date.",
+    path: ["startDate"],
+  });
 
 type FormValues = z.infer<typeof schema>;
 
 interface BudgetFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (budget: Omit<Budget, "id">) => void;
+  onSubmit: (budget: Partial<Budget> & { name: string; startDate: string; endDate: string; amount: number }) => Promise<{ success: boolean; error?: string }>;
   budget?: Budget | null;
-  onUpdate?: (id: string, updates: Partial<Budget>) => void;
+  onUpdate?: (id: string, updates: Partial<Budget>) => Promise<{ success: boolean; error?: string }>;
 }
 
 const COLOR_OPTIONS = ["#7c3aed", "#0ea5e9", "#f59e0b", "#059669", "#ec4899", "#6366f1"];
@@ -52,21 +58,24 @@ export function BudgetForm({ open, onOpenChange, onSubmit, budget, onUpdate }: B
       period: "monthly",
       startDate: new Date().toISOString().slice(0, 10),
       endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      totalLimit: 10000,
+      amount: 50000,
       color: "#7c3aed",
     },
   });
 
   const selectedColor = watch("color");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
+    setErrorMessage(null);
     if (budget) {
       reset({
         name: budget.name,
-        period: budget.period,
+        period: budget.period || "monthly",
         startDate: budget.startDate,
         endDate: budget.endDate,
-        totalLimit: budget.totalLimit,
+        amount: budget.amount ?? budget.totalLimit ?? 50000,
         color: budget.color || "#7c3aed",
       });
     } else {
@@ -75,60 +84,84 @@ export function BudgetForm({ open, onOpenChange, onSubmit, budget, onUpdate }: B
         period: "monthly",
         startDate: new Date().toISOString().slice(0, 10),
         endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-        totalLimit: 10000,
+        amount: 50000,
         color: "#7c3aed",
       });
     }
   }, [budget, open, reset]);
 
-  const handleFormSubmit = (data: FormValues) => {
-    if (budget && onUpdate) {
-      onUpdate(budget.id, {
-        name: data.name,
-        period: data.period as BudgetPeriod,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        totalLimit: data.totalLimit,
-        color: data.color,
-      });
-    } else {
-      onSubmit({
-        name: data.name,
-        period: data.period as BudgetPeriod,
-        startDate: data.startDate,
-        endDate: data.endDate,
-        totalLimit: data.totalLimit,
-        totalSpent: 0,
-        color: data.color,
-        isActive: true,
-        categories: [
-          { categoryId: "cat-housing", limit: data.totalLimit * 0.4, spent: 0 },
-          { categoryId: "cat-food", limit: data.totalLimit * 0.3, spent: 0 },
-          { categoryId: "cat-transport", limit: data.totalLimit * 0.3, spent: 0 },
-        ],
-      });
+  const handleFormSubmit = async (data: FormValues) => {
+    setErrorMessage(null);
+    setIsSubmitting(true);
+    try {
+      if (budget && onUpdate) {
+        const res = await onUpdate(budget.id, {
+          name: data.name,
+          period: data.period as BudgetPeriod,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          amount: data.amount,
+          totalLimit: data.amount,
+          color: data.color,
+        });
+        if (!res.success) {
+          setErrorMessage(res.error || "Failed to update budget");
+          return;
+        }
+      } else {
+        const res = await onSubmit({
+          name: data.name,
+          period: data.period as BudgetPeriod,
+          startDate: data.startDate,
+          endDate: data.endDate,
+          amount: data.amount,
+          totalLimit: data.amount,
+          color: data.color,
+          isActive: true,
+        });
+        if (!res.success) {
+          setErrorMessage(res.error || "Failed to create budget");
+          return;
+        }
+      }
+      reset();
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
     }
-    reset();
-    onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{budget ? "Edit Budget Plan" : "Create Budget Plan"}</DialogTitle>
+          <DialogTitle>{budget ? "Edit Budget Period" : "Create Budget Period"}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4">
+          {errorMessage && (
+            <div className="flex items-start gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-xs">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" aria-hidden />
+              <p>{errorMessage}</p>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label htmlFor="bgt-name">Budget Name *</Label>
-            <Input id="bgt-name" placeholder="e.g. Monthly Living, Vacation Budget" {...register("name")} />
+            <Input id="bgt-name" placeholder="e.g. July 2026" {...register("name")} />
             {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="bgt-period">Period</Label>
+              <Label htmlFor="bgt-amount">Budget Amount (₱) *</Label>
+              <Input id="bgt-amount" type="number" placeholder="50000" {...register("amount", { valueAsNumber: true })} />
+              {errors.amount && (
+                <p className="text-xs text-destructive">{errors.amount.message}</p>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bgt-period">Period Type</Label>
               <select
                 id="bgt-period"
                 {...register("period")}
@@ -140,23 +173,18 @@ export function BudgetForm({ open, onOpenChange, onSubmit, budget, onUpdate }: B
                 <option value="custom">Custom</option>
               </select>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="bgt-limit">Limit Amount (₱) *</Label>
-              <Input id="bgt-limit" type="number" placeholder="10000" {...register("totalLimit", { valueAsNumber: true })} />
-              {errors.totalLimit && (
-                <p className="text-xs text-destructive">{errors.totalLimit.message}</p>
-              )}
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="bgt-start">Start Date</Label>
+              <Label htmlFor="bgt-start">Start Date *</Label>
               <Input id="bgt-start" type="date" {...register("startDate")} />
+              {errors.startDate && <p className="text-xs text-destructive">{errors.startDate.message}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="bgt-end">End Date</Label>
+              <Label htmlFor="bgt-end">End Date *</Label>
               <Input id="bgt-end" type="date" {...register("endDate")} />
+              {errors.endDate && <p className="text-xs text-destructive">{errors.endDate.message}</p>}
             </div>
           </div>
 
@@ -181,7 +209,9 @@ export function BudgetForm({ open, onOpenChange, onSubmit, budget, onUpdate }: B
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit">{budget ? "Update Budget" : "Create Budget"}</Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Saving..." : budget ? "Update Budget" : "Create Budget"}
+            </Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -9,6 +9,8 @@ import { QuickActions } from "./QuickActions";
 import { useDashboard } from "../hooks/useDashboard";
 import { Container } from "@/components/layout/Container";
 import { PageWrapper } from "@/components/layout/PageWrapper";
+import type { Transaction } from "@/types/transaction";
+import type { Budget } from "@/types/budget";
 
 function fmt(n: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -19,7 +21,15 @@ function fmt(n: number) {
   }).format(n);
 }
 
-export function DashboardContent() {
+export function DashboardContent({
+  initialTransactions,
+  initialBudgets,
+  initialGoals,
+}: {
+  initialTransactions?: Transaction[];
+  initialBudgets?: Budget[];
+  initialGoals?: any[];
+}) {
   const {
     currentBalance,
     income,
@@ -31,7 +41,13 @@ export function DashboardContent() {
     budgetCategories,
     activeBudget,
     goals,
-  } = useDashboard();
+  } = useDashboard({
+    initialData: {
+      transactions: initialTransactions ?? [],
+      budgets: initialBudgets ?? [],
+      goals: initialGoals ?? [],
+    },
+  });
 
   return (
     <PageWrapper>
@@ -106,8 +122,8 @@ export function DashboardContent() {
             {activeBudget && (
               <BudgetOverviewCard
                 budgetName={activeBudget.name}
-                totalSpent={activeBudget.totalSpent}
-                totalLimit={activeBudget.totalLimit}
+                totalSpent={activeBudget.totalSpent ?? activeBudget.totalExpenses ?? 0}
+                totalLimit={activeBudget.amount ?? activeBudget.totalLimit ?? 0}
                 categories={budgetCategories}
               />
             )}

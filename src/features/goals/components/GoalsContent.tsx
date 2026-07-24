@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
   Target,
   Plus,
@@ -54,20 +55,25 @@ const COLOR_OPTIONS = [
   "#6366f1", // Indigo
 ];
 
-export function GoalsContent() {
+export function GoalsContent({
+  initialGoals,
+}: {
+  initialGoals?: GoalItem[];
+}) {
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
 
   const [mounted, setMounted] = useState(false);
-  const [goals, setGoals] = useState<GoalItem[]>([]);
+  const [goals, setGoals] = useState<GoalItem[]>(initialGoals ?? []);
   const [filter, setFilter] = useState<"all" | "in-progress" | "completed">("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<GoalItem | null>(null);
+  const hasInitialGoals = initialGoals !== undefined;
 
   useEffect(() => {
     setMounted(true);
 
-    if (isAuthenticated) {
+    if (isAuthenticated && !hasInitialGoals) {
       fetch("/api/dashboard")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
@@ -86,7 +92,7 @@ export function GoalsContent() {
           }
         })
         .catch((err) => console.error("Failed to fetch user goals", err));
-    } else if (typeof window !== "undefined") {
+    } else if (!isAuthenticated && typeof window !== "undefined") {
       const storedUser = window.localStorage.getItem("budget_tracker_user");
       if (storedUser) {
         try {
@@ -97,7 +103,7 @@ export function GoalsContent() {
         }
       }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, hasInitialGoals]);
 
   // Sync to localStorage
   useEffect(() => {
@@ -154,7 +160,7 @@ export function GoalsContent() {
     setModalOpen(true);
   };
 
-  const handleSaveGoal = (e: React.FormEvent) => {
+  const handleSaveGoal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formName || !formTarget) return;
 
@@ -162,6 +168,7 @@ export function GoalsContent() {
     const savedNum = parseFloat(formSaved) || 0;
 
     if (editingGoal) {
+      const previous = goals;
       setGoals((prev) =>
         prev.map((g) =>
           g.id === editingGoal.id
@@ -177,9 +184,33 @@ export function GoalsContent() {
             : g
         )
       );
+      try {
+        const res = await fetch(`/api/goals/${editingGoal.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formName,
+            targetAmount: targetNum,
+            savedAmount: savedNum,
+            deadline: formDeadline,
+            color: formColor,
+            icon: formIcon,
+          }),
+        });
+        if (!res.ok) {
+          setGoals(previous);
+          const data = await res.json().catch(() => ({}));
+          toast.error(data.error || "Failed to update goal");
+        }
+      } catch (err) {
+        setGoals(previous);
+        console.error("Failed to update goal:", err);
+        toast.error("Network error while updating goal");
+      }
     } else {
+      const tempId = `goal-${Date.now()}`;
       const newGoal: GoalItem = {
-        id: `goal-${Date.now()}`,
+        id: tempId,
         name: formName,
         target: targetNum,
         saved: savedNum,
@@ -188,12 +219,58 @@ export function GoalsContent() {
         icon: formIcon,
       };
       setGoals((prev) => [newGoal, ...prev]);
+      try {
+        const res = await fetch("/api/goals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formName,
+            targetAmount: targetNum,
+            savedAmount: savedNum,
+            deadline: formDeadline,
+            color: formColor,
+            icon: formIcon,
+          }),
+        });
+        if (!res.ok) {
+          setGoals((prev) => prev.filter((g) => g.id !== tempId));
+          const data = await res.json().catch(() => ({}));
+          toast.error(data.error || "Failed to create goal");
+        } else {
+          const data = await res.json();
+          setGoals((prev) =>
+            prev.map((g) => (g.id === tempId ? data.data : g))
+          );
+        }
+      } catch (err) {
+        setGoals((prev) => prev.filter((g) => g.id !== tempId));
+        console.error("Failed to create goal:", err);
+        toast.error("Network error while creating goal");
+      }
     }
     setModalOpen(false);
   };
 
-  const handleDeleteGoal = (id: string) => {
-    setGoals((prev) => prev.filter((g) => g.id !== id));
+  const handleDeleteGoal = async (id: string) => {
+    let previous: GoalItem[] = [];
+    setGoals((prev) => {
+      previous = prev;
+      return prev.filter((g) => g.id !== id);
+    });
+    try {
+      const res = await fetch(`/api/goals/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        setGoals(previous);
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error || "Failed to delete goal");
+      }
+    } catch (err) {
+      setGoals(previous);
+      console.error("Failed to delete goal from database:", err);
+      toast.error("Network error while deleting goal");
+    }
   };
 
   const handleAddDeposit = (id: string) => {

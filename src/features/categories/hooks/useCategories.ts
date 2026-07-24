@@ -1,15 +1,24 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
 import { MOCK_CATEGORIES } from "../mock/categories";
 import type { Category } from "@/types/category";
 
-export function useCategories() {
+export interface UseCategoriesOptions {
+  initialCategories?: Category[];
+}
+
+export function useCategories(options?: UseCategoriesOptions) {
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { initialCategories } = options ?? {};
+
+  const [categories, setCategories] = useState<Category[]>(
+    initialCategories ?? []
+  );
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && initialCategories === undefined) {
       fetch("/api/categories")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
@@ -18,7 +27,7 @@ export function useCategories() {
           }
         })
         .catch((err) => console.error("Failed to fetch user categories", err));
-    } else if (typeof window !== "undefined") {
+    } else if (!isAuthenticated && typeof window !== "undefined") {
       const storedUser = window.localStorage.getItem("budget_tracker_user");
       if (storedUser) {
         try {
@@ -29,7 +38,7 @@ export function useCategories() {
         }
       }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, initialCategories]);
 
   const addCategory = async (category: Omit<Category, "id">) => {
     if (isAuthenticated) {
@@ -58,10 +67,30 @@ export function useCategories() {
     setCategories((prev) => [newCat, ...prev]);
   };
 
-  const updateCategory = (id: string, updates: Partial<Category>) => {
-    setCategories((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updates } : c))
-    );
+  const updateCategory = async (id: string, updates: Partial<Category>) => {
+    let previous: Category[] = [];
+    setCategories((prev) => {
+      previous = prev;
+      return prev.map((c) => (c.id === id ? { ...c, ...updates } : c));
+    });
+    if (isAuthenticated) {
+      try {
+        const res = await fetch(`/api/categories/${id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(updates),
+        });
+        if (!res.ok) {
+          setCategories(previous);
+          const data = await res.json().catch(() => ({}));
+          toast.error(data.error || "Failed to update category");
+        }
+      } catch (err) {
+        setCategories(previous);
+        console.error("Failed to update category:", err);
+        toast.error("Network error while updating category");
+      }
+    }
   };
 
   const deleteCategory = (id: string) => {

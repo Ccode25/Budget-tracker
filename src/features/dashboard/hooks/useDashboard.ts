@@ -10,39 +10,78 @@ import { SAVINGS_GOALS } from "@/features/analytics/mock/analytics";
 import { DEMO_TRANSACTIONS } from "@/features/transactions/mock/transactions";
 import { getCategoryName, getCategoryColor } from "@/features/categories/mock/categories";
 
-export function useDashboard() {
+export interface UseDashboardOptions {
+  initialData?: {
+    transactions: Transaction[];
+    budgets: Budget[];
+    goals: any[];
+  };
+}
+
+export function useDashboard(options?: UseDashboardOptions) {
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
 
-  // Server state for authenticated users
+  const initial = options?.initialData;
+  const hasServerInitialData =
+    (initial?.transactions?.length ?? 0) > 0 ||
+    (initial?.budgets?.length ?? 0) > 0 ||
+    (initial?.goals?.length ?? 0) > 0;
+
   const [dbData, setDbData] = useState<{
     transactions: Transaction[];
     budgets: Budget[];
     goals: any[];
-  }>({ transactions: [], budgets: [], goals: [] });
+  }>(() => {
+    if (hasServerInitialData) {
+      return {
+        transactions: initial?.transactions ?? [],
+        budgets: initial?.budgets ?? [],
+        goals: initial?.goals ?? [],
+      };
+    }
+    if (typeof window !== "undefined") {
+      try {
+        const cached = window.sessionStorage.getItem("cache_dashboard_data");
+        if (cached) return JSON.parse(cached);
+      } catch {
+        // fallback
+      }
+    }
+    return {
+      transactions: [],
+      budgets: [],
+      goals: [],
+    };
+  });
 
-  // Local storage state ONLY for explicit Demo Mode
   const [demoTransactions] = useLocalStorage<Transaction[]>(
     "budget_tracker_transactions",
     []
   );
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && (dbData.transactions.length === 0 || !hasServerInitialData)) {
       fetch("/api/dashboard")
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
-            setDbData({
+            const newData = {
               transactions: data.transactions || [],
               budgets: data.budgets || [],
               goals: data.goals || [],
-            });
+            };
+            setDbData(newData);
+            if (typeof window !== "undefined") {
+              try {
+                window.sessionStorage.setItem("cache_dashboard_data", JSON.stringify(newData));
+              } catch {}
+            }
           }
         })
         .catch((err) => console.error("Failed to fetch authenticated dashboard data", err));
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, hasServerInitialData, dbData.transactions.length]);
 
   // Determine active transactions: Server DB data if authenticated; Demo data only if in demo mode
   const allTransactions = useMemo(() => {
