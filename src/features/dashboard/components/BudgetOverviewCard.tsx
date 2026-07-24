@@ -18,6 +18,24 @@ interface BudgetOverviewCardProps {
   totalSpent: number;
   totalLimit: number;
   categories: BudgetCategory[];
+  monthlyIncome?: number;
+  endDate?: string;
+}
+
+function getDaysRemaining(endDateStr?: string): string {
+  const now = new Date();
+  let end: Date;
+  if (endDateStr) {
+    end = new Date(endDateStr.includes("T") ? endDateStr : endDateStr + "T23:59:59");
+  } else {
+    end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+  }
+  const diffTime = end.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return "Period ended";
+  if (diffDays === 0) return "Ends today";
+  if (diffDays === 1) return "1 day left";
+  return `${diffDays} days left`;
 }
 
 export function BudgetOverviewCard({
@@ -25,10 +43,16 @@ export function BudgetOverviewCard({
   totalSpent,
   totalLimit,
   categories,
+  monthlyIncome,
+  endDate,
 }: BudgetOverviewCardProps) {
   const totalPct = totalLimit > 0 ? (totalSpent / totalLimit) * 100 : 0;
   const remaining = totalLimit - totalSpent;
   const top5 = categories.slice(0, 5);
+  const daysLeftStr = getDaysRemaining(endDate);
+
+  const budgetIncomeTally = monthlyIncome && monthlyIncome > 0 ? (totalLimit / monthlyIncome) * 100 : 0;
+  const unbudgetedIncome = monthlyIncome ? Math.max(0, monthlyIncome - totalLimit) : 0;
 
   return (
     <div className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-5">
@@ -46,6 +70,20 @@ export function BudgetOverviewCard({
         </div>
       </div>
 
+      {/* Monthly Income Tally Banner */}
+      {monthlyIncome !== undefined && monthlyIncome > 0 && (
+        <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-2.5 text-xs flex flex-wrap items-center justify-between gap-1 text-emerald-800 dark:text-emerald-300">
+          <div>
+            <span className="font-semibold">Income Tally:</span> ₱{totalLimit.toLocaleString("en-PH")} budgeted of ₱{monthlyIncome.toLocaleString("en-PH")} ({budgetIncomeTally.toFixed(0)}%)
+          </div>
+          {unbudgetedIncome > 0 && (
+            <span className="font-medium text-[11px] opacity-90">
+              ₱{unbudgetedIncome.toLocaleString("en-PH")} unbudgeted
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Donut-style total */}
       <div>
         <div className="flex items-baseline justify-between mb-1.5">
@@ -61,7 +99,7 @@ export function BudgetOverviewCard({
           className={cn("h-2", totalPct >= 90 ? "[&>div]:bg-destructive" : totalPct >= 70 ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary")}
           aria-label={`${totalPct.toFixed(0)}% of budget used`}
         />
-        <p className="text-xs text-muted-foreground mt-1">{totalPct.toFixed(0)}% used · 9 days left</p>
+        <p className="text-xs text-muted-foreground mt-1">{totalPct.toFixed(0)}% used · {daysLeftStr}</p>
       </div>
 
       {/* Category bars */}

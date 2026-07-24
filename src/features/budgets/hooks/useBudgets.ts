@@ -254,10 +254,22 @@ export function useBudgets(options?: UseBudgetsOptions) {
     };
   };
 
+  const totalMonthlyIncome = useMemo(() => {
+    const now = new Date();
+    const currentYr = now.getFullYear();
+    const currentMo = String(now.getMonth() + 1).padStart(2, "0");
+    const currentMonthPrefix = `${currentYr}-${currentMo}`;
+
+    return transactions
+      .filter((t) => t.status !== "failed" && t.type === "income" && t.date.startsWith(currentMonthPrefix))
+      .reduce((sum, t) => sum + t.amount, 0);
+  }, [transactions]);
+
   return {
     budgets,
     activeBudgets,
     transactions,
+    totalMonthlyIncome,
     setTransactions,
     selectedId,
     setSelectedId,

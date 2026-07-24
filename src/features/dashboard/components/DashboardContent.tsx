@@ -125,6 +125,8 @@ export function DashboardContent({
                 totalSpent={activeBudget.totalSpent ?? activeBudget.totalExpenses ?? 0}
                 totalLimit={activeBudget.amount ?? activeBudget.totalLimit ?? 0}
                 categories={budgetCategories}
+                monthlyIncome={income}
+                endDate={activeBudget.endDate}
               />
             )}
             <GoalsCard goals={goals} />

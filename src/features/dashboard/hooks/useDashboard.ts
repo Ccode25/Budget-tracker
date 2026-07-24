@@ -8,6 +8,7 @@ import { MOCK_BUDGETS } from "@/features/budgets/mock/budgets";
 import { SAVINGS_GOALS } from "@/features/analytics/mock/analytics";
 import { DEMO_TRANSACTIONS } from "@/features/transactions/mock/transactions";
 import { getCategoryName, getCategoryColor } from "@/features/categories/mock/categories";
+import { calculateBudgetSummary } from "@/features/budgets/utils/budgetUtils";
 
 export interface UseDashboardOptions {
   initialData?: {
@@ -181,7 +182,7 @@ export function useDashboard(options?: UseDashboardOptions) {
     const activeBudget = userBudgets.find((b) => b.isActive) || userBudgets[0] || null;
     let calculatedTotalSpent = 0;
     const budgetCategories = (activeBudget?.categories ?? []).map((c) => {
-      const actualSpent = categorySpentMap[c.categoryId] ?? 0;
+      const actualSpent = categorySpentMap[c.categoryId] ?? categorySpentMap[(c as any).id] ?? 0;
       calculatedTotalSpent += actualSpent;
       return {
         ...c,
@@ -192,10 +193,24 @@ export function useDashboard(options?: UseDashboardOptions) {
       };
     });
 
+    let activeBudgetSpent = calculatedTotalSpent;
+    if (activeBudget) {
+      const summary = calculateBudgetSummary(activeBudget, validTransactions);
+      const periodExpenses = summary.totalExpenses;
+      const dbSpent = activeBudget.totalSpent ?? activeBudget.totalExpenses ?? 0;
+      activeBudgetSpent = Math.max(calculatedTotalSpent, periodExpenses, dbSpent, expenses);
+    }
+
+    const activeBudgetLimit = activeBudget ? (activeBudget.amount ?? activeBudget.totalLimit ?? 0) : 0;
+    const unbudgetedIncome = Math.max(0, income - activeBudgetLimit);
+
     const dynamicActiveBudget = activeBudget
       ? {
           ...activeBudget,
-          totalSpent: calculatedTotalSpent,
+          totalSpent: activeBudgetSpent,
+          totalExpenses: activeBudgetSpent,
+          totalIncome: income,
+          unbudgetedIncome,
         }
       : null;
 
@@ -225,6 +240,7 @@ export function useDashboard(options?: UseDashboardOptions) {
       recentTransactions,
       budgetCategories,
       activeBudget: dynamicActiveBudget,
+      unbudgetedIncome,
       goals: userGoals,
     };
   }, [allTransactions, isAuthenticated, dbData.budgets, dbData.goals]);

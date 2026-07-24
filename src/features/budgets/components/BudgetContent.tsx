@@ -26,6 +26,7 @@ export function BudgetContent({
   const {
     activeBudgets,
     selectedBudget,
+    totalMonthlyIncome,
     setSelectedId,
     addBudget,
     updateBudget,
@@ -56,6 +57,8 @@ export function BudgetContent({
   const totalAmount = displayBudgets.reduce((s, b) => s + (b.amount ?? b.totalLimit ?? 0), 0);
   const totalExpenses = displayBudgets.reduce((s, b) => s + (b.totalExpenses ?? b.totalSpent ?? 0), 0);
   const totalPct = totalAmount > 0 ? Math.round((totalExpenses / totalAmount) * 100) : 0;
+  const income = totalMonthlyIncome ?? 0;
+  const allocatedPct = income > 0 ? Math.round((totalAmount / income) * 100) : 0;
 
   const handleOpenAdd = () => {
     setEditingBudget(null);
@@ -107,33 +110,48 @@ export function BudgetContent({
               </Button>
             </div>
 
-            {/* Global Summary */}
+            {/* Global Summary & Income Tally */}
             <Card className="bg-primary text-primary-foreground overflow-hidden">
               <CardContent className="p-6 space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center border-b border-primary-foreground/15 pb-4">
                   <div>
-                    <p className="text-sm font-medium opacity-80">Total Active Budget Limit</p>
-                    <p className="text-3xl font-bold mt-1">
+                    <p className="text-xs font-medium opacity-80 uppercase tracking-wider">Monthly Income</p>
+                    <p className="text-2xl font-bold mt-0.5">
+                      ₱{income.toLocaleString()}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium opacity-80 uppercase tracking-wider">Total Active Budget Limit</p>
+                    <p className="text-2xl font-bold mt-0.5">
                       ₱{totalExpenses.toLocaleString()}
-                      <span className="text-lg font-normal opacity-70 ml-1">
+                      <span className="text-sm font-normal opacity-70 ml-1">
                         / ₱{totalAmount.toLocaleString()}
                       </span>
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm opacity-80">Remaining</p>
-                    <p className="text-2xl font-bold">
-                      ₱{Math.max(0, totalAmount - totalExpenses).toLocaleString()}
+                  <div>
+                    <p className="text-xs font-medium opacity-80 uppercase tracking-wider">Unbudgeted Income</p>
+                    <p className="text-2xl font-bold mt-0.5">
+                      ₱{Math.max(0, income - totalAmount).toLocaleString()}
                     </p>
                   </div>
                 </div>
-                <Progress
-                  value={Math.min(totalPct, 100)}
-                  className="h-2 bg-primary-foreground/20 [&>div]:bg-primary-foreground"
-                />
-                <p className="text-xs opacity-70">
-                  {totalPct}% of total budget used across {displayBudgets.length} active periods.
-                </p>
+
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-xs opacity-90">
+                    <span>Budget Consumption ({totalPct}%)</span>
+                    <span>Remaining Budget: ₱{Math.max(0, totalAmount - totalExpenses).toLocaleString()}</span>
+                  </div>
+                  <Progress
+                    value={Math.min(totalPct, 100)}
+                    className="h-2 bg-primary-foreground/20 [&>div]:bg-primary-foreground"
+                  />
+                  <p className="text-xs opacity-75 pt-0.5">
+                    {income > 0
+                      ? `₱${totalAmount.toLocaleString()} budgeted of ₱${income.toLocaleString()} monthly income (${allocatedPct}% allocated)`
+                      : `${totalPct}% of total budget spent across ${displayBudgets.length} active period(s).`}
+                  </p>
+                </div>
               </CardContent>
             </Card>
 

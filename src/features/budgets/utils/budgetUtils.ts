@@ -35,12 +35,16 @@ export function calculateBudgetSummary(
 ): ComputedBudgetSummary {
   const amount = budget.amount ?? budget.totalLimit ?? 0;
 
-  const periodTransactions = transactions.filter(
-    (t) =>
-      t.status !== "failed" &&
-      t.date >= budget.startDate &&
-      t.date <= budget.endDate
-  );
+  const start = budget.startDate ? budget.startDate.slice(0, 10) : "";
+  const end = budget.endDate ? budget.endDate.slice(0, 10) : "";
+
+  const periodTransactions = transactions.filter((t) => {
+    if (t.status === "failed") return false;
+    const d = t.date ? t.date.slice(0, 10) : "";
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+    return true;
+  });
 
   const totalExpenses = periodTransactions
     .filter((t) => t.type === "expense")
