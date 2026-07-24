@@ -1,9 +1,10 @@
 /**
  * NextAuth / Auth.js Configuration Setup
- * Includes Google OAuth provider and Neon PostgreSQL persistence safeguards.
+ * Google OAuth only — single sign-on.
  */
 
 import { userRepository } from "../repositories/user.repository";
+import { onboardingService } from "@/features/onboarding/onboarding.service";
 
 import GoogleProvider from "next-auth/providers/google";
 import type { AuthOptions } from "next-auth";
@@ -61,6 +62,9 @@ export const authOptions: AuthOptions = {
             emailVerified: true,
             googleId: account.providerAccountId,
           });
+
+          // Run shared onboarding pipeline for new users
+          await onboardingService.initializeNewUser(existingUser.id);
         } else if (!existingUser.googleId) {
           // Link Google ID to existing verified account by email match
           await userRepository.update(existingUser.id, {

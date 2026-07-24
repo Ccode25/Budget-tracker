@@ -1,9 +1,13 @@
 "use client";
 
-import Link from "next/link";
+import { signIn } from "next-auth/react";
 import { Logo } from "@/components/layout/Logo";
 
 export function PublicFooter() {
+  const handleGoogleLogin = () => {
+    signIn("google", { callbackUrl: "/dashboard" });
+  };
+
   return (
     <footer className="border-t border-border/40 bg-muted/30">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -16,28 +20,34 @@ export function PublicFooter() {
           </div>
 
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">Product</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">Features</h3>
             <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
-              <li><Link href="#features" className="hover:text-foreground">Budget Planner</Link></li>
-              <li><Link href="#features" className="hover:text-foreground">Transaction Tracker</Link></li>
-              <li><Link href="#features" className="hover:text-foreground">Savings Goals</Link></li>
-              <li><Link href="#features" className="hover:text-foreground">CSV/XLSX Import</Link></li>
+              <li><a href="#budgets" className="hover:text-foreground transition-colors">Date-Range Budgets</a></li>
+              <li><a href="#transactions" className="hover:text-foreground transition-colors">Transaction Ledger</a></li>
+              <li><a href="#analytics" className="hover:text-foreground transition-colors">Revolut Analytics</a></li>
+              <li><a href="#goals" className="hover:text-foreground transition-colors">Savings Goals</a></li>
+              <li><a href="#categories" className="hover:text-foreground transition-colors">Custom Categories</a></li>
             </ul>
           </div>
 
           <div>
-            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">Resources</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">Quick Access</h3>
             <ul className="mt-3 space-y-2 text-xs text-muted-foreground">
-              <li><Link href="/dashboard?demo=true" className="hover:text-foreground">Demo Dashboard</Link></li>
-              <li><Link href="/login" className="hover:text-foreground">Account Login</Link></li>
-              <li><Link href="/register" className="hover:text-foreground">Create Account</Link></li>
+              <li><a href="#demo" className="hover:text-foreground transition-colors">Live Demo Dashboard</a></li>
+              <li>
+                <button type="button" onClick={handleGoogleLogin} className="hover:text-foreground transition-colors text-left">
+                  Sign In with Google
+                </button>
+              </li>
+              <li><a href="#faq" className="hover:text-foreground transition-colors">FAQ & Support</a></li>
+              <li><a href="#security" className="hover:text-foreground transition-colors">Security Overview</a></li>
             </ul>
           </div>
 
           <div>
             <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">Security & Privacy</h3>
             <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
-              Bank-grade 256-bit encryption. Neon Serverless Postgres cloud data protection.
+              Bank-grade 256-bit SSL encryption. Neon Serverless Postgres cloud data protection with Google OAuth 2.0 authentication.
             </p>
           </div>
         </div>
@@ -45,8 +55,8 @@ export function PublicFooter() {
         <div className="mt-8 border-t border-border/40 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-muted-foreground gap-4">
           <p>© {new Date().getFullYear()} BudgetTracker. All rights reserved.</p>
           <div className="flex items-center gap-6">
-            <Link href="#" className="hover:text-foreground">Privacy Policy</Link>
-            <Link href="#" className="hover:text-foreground">Terms of Service</Link>
+            <a href="#security" className="hover:text-foreground transition-colors">Privacy Policy</a>
+            <a href="#security" className="hover:text-foreground transition-colors">Terms of Service</a>
           </div>
         </div>
       </div>

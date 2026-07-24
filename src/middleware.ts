@@ -26,16 +26,16 @@ export function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Check session cookies (Auth.js session token or app session cookie)
+    // Check session cookies (Auth.js session token or custom access token)
     const sessionToken =
       request.cookies.get("next-auth.session-token")?.value ||
       request.cookies.get("__Secure-next-auth.session-token")?.value ||
       request.cookies.get("session_token")?.value;
 
-    if (!sessionToken) {
-      const loginUrl = new URL("/login", request.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
-      return NextResponse.redirect(loginUrl);
+    const accessToken = request.cookies.get("access_token")?.value;
+
+    if (!sessionToken && !accessToken) {
+      return NextResponse.redirect(new URL("/api/auth/signin/google", request.url));
     }
   }
 

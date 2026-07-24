@@ -21,12 +21,9 @@ export interface UserSchema extends BaseEntitySchema {
   email: string;
   name: string;
   avatarUrl?: string;
-  passwordHash?: string | null;
   role: UserRole;
   emailVerified: boolean;
   googleId?: string | null;
-  resetTokenHash?: string | null;
-  resetTokenExpires?: string | null;
 }
 
 export interface RefreshTokenSchema {

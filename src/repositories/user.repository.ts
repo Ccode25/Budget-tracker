@@ -1,6 +1,5 @@
 import { dbClient } from "@/database/client";
 import type { UserSchema } from "@/database/schema";
-import { categoryRepository } from "@/repositories/category.repository";
 
 export class UserRepository {
   private static instance: UserRepository;
@@ -69,9 +68,6 @@ export class UserRepository {
 
     const rows = await dbClient.query(sql, params);
     const createdUser = this.mapRow(rows[0]);
-
-    // Provision 18 default categories (14 expense, 4 income) for new user
-    await categoryRepository.seedDefaultCategories(createdUser.id);
 
     return createdUser;
   }
