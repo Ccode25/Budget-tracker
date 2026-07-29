@@ -27,8 +27,8 @@ export default async function BudgetPage() {
 
   if (userId) {
     const t1 = Date.now();
-    const [{ data } = { data: [] }, budgets] = await Promise.all([
-      transactionRepository.findAll(userId),
+    const [data, budgets] = await Promise.all([
+      transactionRepository.findAllUserTransactions(userId),
       budgetRepository.findAll(userId),
     ]);
     const dbMs = Date.now() - t1;

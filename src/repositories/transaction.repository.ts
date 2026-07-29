@@ -39,12 +39,17 @@ export class TransactionRepository {
         queryStr += ` AND type = ANY($${params.length})`;
       }
 
+      if (filters?.categoryIds && filters.categoryIds.length > 0) {
+        params.push(filters.categoryIds);
+        queryStr += ` AND category_id = ANY($${params.length})`;
+      }
+
       const countRes = await dbClient.query<{ count: string }>(`SELECT COUNT(*) as count FROM (${queryStr}) as filtered`, params);
       const total = parseInt(countRes[0]?.count || "0", 10);
 
       const offset = (page - 1) * effectivePageSize;
       params.push(effectivePageSize, offset);
-      queryStr += ` ORDER BY date DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
+      queryStr += ` ORDER BY date DESC, created_at DESC LIMIT $${params.length - 1} OFFSET $${params.length}`;
 
       const rows = await dbClient.query<any>(queryStr, params);
       const data: Transaction[] = rows.map((r) => ({
@@ -77,7 +82,7 @@ export class TransactionRepository {
     const t0 = Date.now();
     try {
       const rows = await dbClient.query<any>(
-        "SELECT * FROM transactions WHERE user_id = $1 AND deleted_at IS NULL ORDER BY date DESC",
+        "SELECT * FROM transactions WHERE user_id = $1 AND deleted_at IS NULL ORDER BY date DESC, created_at DESC",
         [userId]
       );
       const ms = Date.now() - t0;

@@ -28,7 +28,7 @@ export function Pagination({
     return [1, "...", page - 1, page, page + 1, "...", totalPages];
   })();
 
-  if (totalPages <= 1) return null;
+
 
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">

@@ -52,6 +52,9 @@ interface TransactionTableProps {
   onDelete: (id: string) => void;
   selectedId: string | null;
   isLoading?: boolean;
+  selectedIds?: Set<string>;
+  onToggleSelect?: (id: string) => void;
+  onToggleSelectAll?: () => void;
 }
 
 const COLUMNS: Array<{ key: TransactionSort["field"] | "status" | "actions"; label: string; sortable: boolean; className: string }> = [
@@ -72,6 +75,9 @@ export function TransactionTable({
   onDelete,
   selectedId,
   isLoading,
+  selectedIds,
+  onToggleSelect,
+  onToggleSelectAll,
 }: TransactionTableProps) {
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +135,17 @@ export function TransactionTable({
     <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
       {/* Table header */}
       <div className="flex items-center border-b border-border bg-muted/30 px-4 py-2.5 text-xs font-semibold text-muted-foreground">
+        {onToggleSelectAll && (
+          <div className="w-8 shrink-0 flex items-center">
+            <input
+              type="checkbox"
+              aria-label="Select all transactions"
+              className="h-4 w-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
+              checked={transactions.length > 0 && selectedIds?.size === transactions.length}
+              onChange={onToggleSelectAll}
+            />
+          </div>
+        )}
         <div className="w-28">
           <button
             type="button"
@@ -165,6 +182,9 @@ export function TransactionTable({
             Amount <SortIcon field="amount" sort={sort} />
           </button>
         </div>
+        <div className="hidden w-28 text-right font-semibold sm:block">
+          Balance
+        </div>
         <div className="hidden w-24 md:block">Status</div>
         <div className="w-10" />
       </div>
@@ -173,7 +193,7 @@ export function TransactionTable({
       <div
         ref={parentRef}
         className="overflow-y-auto scrollbar-thin"
-        style={{ maxHeight: "calc(100vh - 340px)", minHeight: "200px" }}
+        style={{ maxHeight: "calc(100vh - 250px)", minHeight: "400px" }}
         role="table"
         aria-label="Transactions table"
       >
@@ -198,7 +218,7 @@ export function TransactionTable({
                 }}
                 className={cn(
                   "flex items-center border-b border-border px-4 py-3 transition-colors cursor-pointer",
-                  isSelected ? "bg-primary/5" : "hover:bg-muted/30",
+                  selectedIds?.has(tx.id) ? "bg-primary/10" : isSelected ? "bg-primary/5" : "hover:bg-muted/30",
                 )}
                 onClick={() => onSelect(tx.id)}
                 role="row"
@@ -206,6 +226,17 @@ export function TransactionTable({
                 tabIndex={0}
                 onKeyDown={(e) => e.key === "Enter" && onSelect(tx.id)}
               >
+                {onToggleSelect && (
+                  <div className="w-8 shrink-0 flex items-center" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select transaction ${tx.description}`}
+                      className="h-4 w-4 rounded border-input text-primary focus:ring-primary cursor-pointer"
+                      checked={selectedIds?.has(tx.id) ?? false}
+                      onChange={() => onToggleSelect(tx.id)}
+                    />
+                  </div>
+                )}
                 {/* Date */}
                 <div className="w-28 shrink-0 text-xs text-muted-foreground">
                   {new Date(tx.date + "T00:00:00").toLocaleDateString("en-US", {
@@ -260,6 +291,13 @@ export function TransactionTable({
                   >
                     {tx.type === "income" ? "+" : "-"}
                     {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(tx.amount)}
+                  </span>
+                </div>
+
+                {/* Running Balance */}
+                <div className="hidden w-28 shrink-0 text-right sm:block">
+                  <span className="tabular-nums text-xs font-mono text-muted-foreground">
+                    {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format(tx.runningBalance ?? 0)}
                   </span>
                 </div>
 

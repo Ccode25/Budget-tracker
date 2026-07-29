@@ -96,6 +96,9 @@ export function RecentTransactions({ transactions }: RecentTransactionsProps) {
               >
                 {formatAmount(tx.amount, tx.type)}
               </p>
+              <p className="text-[10px] font-mono text-muted-foreground tabular-nums">
+                Bal: {new Intl.NumberFormat("en-PH", { style: "currency", currency: "PHP" }).format((tx as any).runningBalance ?? 0)}
+              </p>
               {tx.status === "pending" && (
                 <Badge variant="secondary" className="mt-0.5 h-4 px-1 text-[10px]">
                   pending

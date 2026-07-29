@@ -17,8 +17,7 @@ export default async function AnalyticsPage() {
   let initialTransactions: Transaction[] = [];
 
   if (userId) {
-    const { data } = await transactionRepository.findAll(userId);
-    initialTransactions = data;
+    initialTransactions = await transactionRepository.findAllUserTransactions(userId);
   }
 
   return <AnalyticsContent initialTransactions={initialTransactions} />;

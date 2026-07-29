@@ -15,13 +15,14 @@ export async function GET(req: Request) {
 
   const search = searchParams.get("search") || undefined;
   const types = searchParams.get("types") ? searchParams.get("types")!.split(",") as any : undefined;
+  const categoryIds = searchParams.get("categoryIds") ? searchParams.get("categoryIds")!.split(",") : undefined;
   const page = parseInt(searchParams.get("page") || "1", 10);
   const pageSize = parseInt(searchParams.get("pageSize") || "20", 10);
 
   try {
     const { data, total } = await transactionRepository.findAll(
       userId,
-      { search, types },
+      { search, types, categoryIds },
       undefined,
       page,
       pageSize

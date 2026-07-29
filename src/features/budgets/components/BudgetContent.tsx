@@ -12,6 +12,7 @@ import { BudgetForm } from "./BudgetForm";
 import { BudgetDetails } from "./BudgetDetails";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { formatPHP } from "@/lib/utils";
 import type { Budget } from "@/types/budget";
 import type { Transaction } from "@/types/transaction";
 
@@ -117,22 +118,22 @@ export function BudgetContent({
                   <div>
                     <p className="text-xs font-medium opacity-80 uppercase tracking-wider">Monthly Income</p>
                     <p className="text-2xl font-bold mt-0.5">
-                      ₱{income.toLocaleString()}
+                      {formatPHP(income)}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs font-medium opacity-80 uppercase tracking-wider">Total Active Budget Limit</p>
                     <p className="text-2xl font-bold mt-0.5">
-                      ₱{totalExpenses.toLocaleString()}
+                      {formatPHP(totalExpenses)}
                       <span className="text-sm font-normal opacity-70 ml-1">
-                        / ₱{totalAmount.toLocaleString()}
+                        / {formatPHP(totalAmount)}
                       </span>
                     </p>
                   </div>
                   <div>
                     <p className="text-xs font-medium opacity-80 uppercase tracking-wider">Unbudgeted Income</p>
                     <p className="text-2xl font-bold mt-0.5">
-                      ₱{Math.max(0, income - totalAmount).toLocaleString()}
+                      {formatPHP(Math.max(0, income - totalAmount))}
                     </p>
                   </div>
                 </div>

@@ -5,6 +5,7 @@ import { Filter, X, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { TransactionFilters, TransactionType, TransactionStatus } from "@/types/transaction";
+import { MOCK_CATEGORIES } from "@/features/categories/mock/categories";
 import { cn } from "@/lib/utils";
 
 interface TransactionFiltersProps {
@@ -137,6 +138,32 @@ export function TransactionFilterPanel({
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <div className="pt-1 border-t border-border/40">
+        <p className="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          Category
+        </p>
+        <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+          {MOCK_CATEGORIES.map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onUpdate("categoryIds", toggleArrayItem(filters.categoryIds, c.id))}
+              className={cn(
+                "rounded-md border px-2 py-0.5 text-[10px] font-medium transition-colors flex items-center gap-1.5",
+                filters.categoryIds.includes(c.id)
+                  ? "border-primary bg-primary/15 text-primary font-semibold"
+                  : "border-border/70 bg-muted/30 text-foreground hover:bg-muted/60",
+              )}
+              aria-pressed={filters.categoryIds.includes(c.id)}
+            >
+              <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: c.color }} />
+              {c.name}
+            </button>
+          ))}
         </div>
       </div>
 

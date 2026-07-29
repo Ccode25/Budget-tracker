@@ -6,10 +6,16 @@ import { Container } from "@/components/layout/Container";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { useAnalytics } from "../hooks/useAnalytics";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatPHP } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
 
 const IncomeExpenseChart = dynamic(
   () => import("./IncomeExpenseChart"),
+  { ssr: false, loading: () => <Skeleton className="h-72 w-full rounded-xl" /> }
+);
+
+const DailyExpensesChart = dynamic(
+  () => import("@/features/dashboard/components/DailyExpensesChart"),
   { ssr: false, loading: () => <Skeleton className="h-72 w-full rounded-xl" /> }
 );
 
@@ -23,7 +29,7 @@ export function AnalyticsContent({
 }: {
   initialTransactions?: Transaction[];
 }) {
-  const { monthlyTrends, categoryBreakdown, summary } = useAnalytics({ initialTransactions });
+  const { monthlyTrends, dailyExpenses, categoryBreakdown, summary } = useAnalytics({ initialTransactions });
 
   return (
     <PageWrapper>
@@ -41,7 +47,7 @@ export function AnalyticsContent({
             <CardContent className="p-5">
               <p className="text-xs text-muted-foreground font-medium">Total Income (YTD)</p>
               <p className="text-2xl font-bold text-emerald-500 mt-1">
-                ₱{summary.totalIncome.toLocaleString()}
+                {formatPHP(summary.totalIncome)}
               </p>
             </CardContent>
           </Card>
@@ -49,7 +55,7 @@ export function AnalyticsContent({
             <CardContent className="p-5">
               <p className="text-xs text-muted-foreground font-medium">Total Expenses (YTD)</p>
               <p className="text-2xl font-bold text-rose-500 mt-1">
-                ₱{summary.totalExpenses.toLocaleString()}
+                {formatPHP(summary.totalExpenses)}
               </p>
             </CardContent>
           </Card>
@@ -57,7 +63,7 @@ export function AnalyticsContent({
             <CardContent className="p-5">
               <p className="text-xs text-muted-foreground font-medium">Net Savings</p>
               <p className="text-2xl font-bold text-primary mt-1">
-                ₱{summary.netSavings.toLocaleString()}
+                {formatPHP(summary.netSavings)}
               </p>
             </CardContent>
           </Card>
@@ -79,6 +85,22 @@ export function AnalyticsContent({
             </p>
           </div>
         )}
+
+        {/* Daily Expenses Graph Card */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Daily Expenses Trend</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {dailyExpenses && dailyExpenses.length > 0 ? (
+              <DailyExpensesChart data={dailyExpenses} />
+            ) : (
+              <div className="h-64 w-full flex items-center justify-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                No daily expense activity available
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

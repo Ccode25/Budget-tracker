@@ -60,6 +60,12 @@ export function useTransactions(options?: UseTransactionsOptions) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialTransactions && initialTransactions.length > 0) {
+      setDbTransactions(initialTransactions);
+    }
+  }, [initialTransactions]);
+
+  useEffect(() => {
     if (isAuthenticated && initialTransactions === undefined) {
       setIsLoading(true);
       fetch("/api/transactions")
@@ -102,7 +108,29 @@ export function useTransactions(options?: UseTransactionsOptions) {
     }
     const uniqueTransactions = Array.from(uniqueMap.values());
 
-    let result = uniqueTransactions.map(enrichTransaction);
+    const chronological = [...uniqueTransactions].sort((a, b) => {
+      const cmp = a.date.localeCompare(b.date);
+      if (cmp !== 0) return cmp;
+      return a.id.localeCompare(b.id);
+    });
+    let running = 0;
+    const runningBalanceMap = new Map<string, number>();
+    for (const t of chronological) {
+      if (t.type === "income") {
+        running += t.amount;
+      } else if (t.type === "expense") {
+        running -= t.amount;
+      }
+      runningBalanceMap.set(t.id, running);
+    }
+
+    let result = uniqueTransactions.map((t) => {
+      const enriched = enrichTransaction(t);
+      return {
+        ...enriched,
+        runningBalance: runningBalanceMap.get(t.id) ?? 0,
+      };
+    });
 
     // Search
     if (filters.search) {

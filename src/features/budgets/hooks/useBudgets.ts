@@ -36,6 +36,11 @@ export function useBudgets(options?: UseBudgetsOptions) {
   }, [isAuthenticated]);
 
   useEffect(() => {
+    if (initialBudgets) setBudgets(initialBudgets);
+    if (initialTransactions) setTransactions(initialTransactions);
+  }, [initialBudgets, initialTransactions]);
+
+  useEffect(() => {
     if (isAuthenticated && initialBudgets === undefined && initialTransactions === undefined) {
       fetchUserData();
     } else if (!isAuthenticated && typeof window !== "undefined") {

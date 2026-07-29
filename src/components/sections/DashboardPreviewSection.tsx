@@ -276,24 +276,78 @@ export function DashboardPreviewSection() {
                   <span className="text-xs text-muted-foreground">{filteredTransactions.length} items shown</span>
                 </div>
 
-                <div className="rounded-xl border border-border/50 overflow-hidden bg-card/80">
-                  <div className="divide-y divide-border/40 text-xs">
-                    {filteredTransactions.map((t) => (
-                      <div key={t.id} className="p-3 flex items-center justify-between hover:bg-muted/40 transition-colors">
-                        <div className="flex items-center gap-3">
-                          <div className="h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: t.categoryColor }}>
-                            {t.category.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-foreground">{t.description}</p>
-                            <p className="text-[11px] text-muted-foreground">{t.merchant} • {t.date}</p>
+                {/* Daily Transaction Summary Bar in Mockup */}
+                {filteredTransactions.length > 0 && (
+                  <div className="rounded-xl border border-border/60 bg-card/90 p-3 text-xs">
+                    {(() => {
+                      const dates = Array.from(new Set(filteredTransactions.map((t) => t.date))).sort((a, b) => b.localeCompare(a));
+                      const latestDate = dates[0];
+                      const dayTx = filteredTransactions.filter((t) => t.date === latestDate);
+                      const dayInc = dayTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+                      const dayExp = dayTx.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+                      const dayNet = dayInc - dayExp;
+
+                      return (
+                        <div>
+                          <p className="font-bold text-[10px] uppercase text-muted-foreground mb-1">
+                            Daily Summary ({latestDate})
+                          </p>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <span className="text-[10px] text-muted-foreground block">Income</span>
+                              <span className="font-bold text-emerald-500">+₱{dayInc.toLocaleString()}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground block">Expenses</span>
+                              <span className="font-bold text-foreground">-₱{dayExp.toLocaleString()}</span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] text-muted-foreground block">Net Daily</span>
+                              <span className={`font-bold ${dayNet >= 0 ? "text-emerald-500" : "text-rose-500"}`}>
+                                {dayNet >= 0 ? "+" : ""}₱{dayNet.toLocaleString()}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <span className={`font-bold text-sm ${t.type === "income" ? "text-emerald-500" : "text-foreground"}`}>
-                          {t.type === "income" ? "+" : "-"}₱{t.amount.toLocaleString()}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })()}
+                  </div>
+                )}
+
+                <div className="rounded-xl border border-border/50 overflow-hidden bg-card/80">
+                  <div className="divide-y divide-border/40 text-xs">
+                    {(() => {
+                      const sorted = [...filteredTransactions].sort((a, b) => a.date.localeCompare(b.date));
+                      let bal = 0;
+                      const balMap = new Map<string, number>();
+                      for (const t of sorted) {
+                        if (t.type === "income") bal += t.amount;
+                        else bal -= t.amount;
+                        balMap.set(t.id, bal);
+                      }
+
+                      return filteredTransactions.map((t) => (
+                        <div key={t.id} className="p-3 flex items-center justify-between hover:bg-muted/40 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ backgroundColor: t.categoryColor }}>
+                              {t.category.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">{t.description}</p>
+                              <p className="text-[11px] text-muted-foreground">{t.merchant} • {t.date}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className={`font-bold text-sm block ${t.type === "income" ? "text-emerald-500" : "text-foreground"}`}>
+                              {t.type === "income" ? "+" : "-"}₱{t.amount.toLocaleString()}
+                            </span>
+                            <span className="text-[10px] font-mono text-muted-foreground">
+                              Bal: ₱{(balMap.get(t.id) ?? 0).toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
               </div>

@@ -1,3 +1,12 @@
 {
-  "$schema": "https://app.kilo.ai/config.json"
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "notebooklm": {
+      "type": "local",
+      "command": ["npx", "@notebooklm/mcp"],
+      "environment": {},
+      "enabled": true,
+      "timeout": 30000
+    }
+  }
 }

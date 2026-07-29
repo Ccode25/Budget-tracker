@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { DEMO_TRANSACTIONS } from "@/features/transactions/mock/transactions";
-import { MOCK_CATEGORIES } from "@/features/categories/mock/categories";
+import { MOCK_CATEGORIES, getCategoryName, getCategoryColor } from "@/features/categories/mock/categories";
 import type { Transaction } from "@/types/transaction";
 import type { MonthlyData, CategoryBreakdown } from "@/types/analytics";
 
@@ -22,6 +22,12 @@ export function useAnalytics(options?: UseAnalyticsOptions) {
     "budget_tracker_transactions",
     []
   );
+
+  useEffect(() => {
+    if (initialTransactions && initialTransactions.length > 0) {
+      setDbTransactions(initialTransactions);
+    }
+  }, [initialTransactions]);
 
   useEffect(() => {
     if (isAuthenticated && initialTransactions === undefined) {
@@ -118,16 +124,40 @@ export function useAnalytics(options?: UseAnalyticsOptions) {
     // Category breakdown for current month
     const totalCurrentMonthExpense = Object.values(categoryMap).reduce((s, c) => s + c.amount, 0);
     const categoryBreakdown: CategoryBreakdown[] = Object.entries(categoryMap).map(([catId, data]) => {
-      const catObj = MOCK_CATEGORIES.find((c) => c.id === catId);
       return {
         categoryId: catId,
-        categoryName: catObj?.name ?? catId,
-        color: catObj?.color ?? "#6b7280",
+        categoryName: getCategoryName(catId),
+        color: getCategoryColor(catId),
         amount: data.amount,
         percentage: totalCurrentMonthExpense > 0 ? (data.amount / totalCurrentMonthExpense) * 100 : 0,
         transactionCount: data.count,
       };
     });
+
+    // Daily Expenses trend calculation for current month
+    const dailyMap: Record<string, { income: number; expenses: number }> = {};
+    for (const t of valid) {
+      if (t.date.startsWith(currentMonthPrefix)) {
+        if (!dailyMap[t.date]) {
+          dailyMap[t.date] = { income: 0, expenses: 0 };
+        }
+        if (t.type === "expense") dailyMap[t.date].expenses += t.amount;
+        else if (t.type === "income") dailyMap[t.date].income += t.amount;
+      }
+    }
+
+    const dailyExpenses = Object.keys(dailyMap)
+      .sort()
+      .map((d) => {
+        const [y, m, day] = d.split("-");
+        const monthLabel = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1).toLocaleString("en-US", { month: "short" });
+        return {
+          date: d,
+          label: `${monthLabel} ${parseInt(day, 10)}`,
+          expenses: Math.round(dailyMap[d].expenses),
+          income: Math.round(dailyMap[d].income),
+        };
+      });
 
     const netSavings = totalIncome - totalExpenses;
     const savingsRate = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0;
@@ -135,6 +165,7 @@ export function useAnalytics(options?: UseAnalyticsOptions) {
 
     return {
       monthlyTrends: monthlyTrends.length > 0 ? monthlyTrends : [],
+      dailyExpenses,
       categoryBreakdown,
       summary: {
         totalIncome,

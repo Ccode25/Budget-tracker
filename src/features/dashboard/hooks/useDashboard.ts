@@ -151,18 +151,54 @@ export function useDashboard(options?: UseDashboardOptions) {
     const currentBalance = totalAllTimeIncome - totalAllTimeExpenses;
 
     const sortedTx = [...uniqueTransactions].sort((a, b) => b.date.localeCompare(a.date));
+    
+    // Chronological order running balance calculation
+    const chronological = [...uniqueTransactions].sort((a, b) => {
+      const cmp = a.date.localeCompare(b.date);
+      if (cmp !== 0) return cmp;
+      return a.id.localeCompare(b.id);
+    });
+    let running = 0;
+    const runningMap = new Map<string, number>();
+    for (const t of chronological) {
+      if (t.type === "income") running += t.amount;
+      else if (t.type === "expense") running -= t.amount;
+      runningMap.set(t.id, running);
+    }
+
     const recentTransactions = sortedTx.slice(0, 10).map((t) => ({
       ...t,
       categoryName: getCategoryName(t.categoryId),
       categoryColor: getCategoryColor(t.categoryId),
+      runningBalance: runningMap.get(t.id) ?? 0,
     }));
 
     const categorySpentMap: Record<string, number> = {};
+    const dailyMap: Record<string, { income: number; expenses: number }> = {};
     for (const t of currentMonthTx) {
+      if (!dailyMap[t.date]) {
+        dailyMap[t.date] = { income: 0, expenses: 0 };
+      }
       if (t.type === "expense") {
         categorySpentMap[t.categoryId] = (categorySpentMap[t.categoryId] || 0) + t.amount;
+        dailyMap[t.date].expenses += t.amount;
+      } else if (t.type === "income") {
+        dailyMap[t.date].income += t.amount;
       }
     }
+
+    const dailyExpenses = Object.keys(dailyMap)
+      .sort()
+      .map((d) => {
+        const [y, m, day] = d.split("-");
+        const monthLabel = new Date(parseInt(y, 10), parseInt(m, 10) - 1, 1).toLocaleString("en-US", { month: "short" });
+        return {
+          date: d,
+          label: `${monthLabel} ${parseInt(day, 10)}`,
+          expenses: Math.round(dailyMap[d].expenses),
+          income: Math.round(dailyMap[d].income),
+        };
+      });
 
     let userBudgets: typeof MOCK_BUDGETS = [];
     if (isAuthenticated) {
@@ -238,6 +274,7 @@ export function useDashboard(options?: UseDashboardOptions) {
       incomeTrend,
       expenseTrend,
       recentTransactions,
+      dailyExpenses,
       budgetCategories,
       activeBudget: dynamicActiveBudget,
       unbudgetedIncome,

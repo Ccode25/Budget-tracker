@@ -15,6 +15,7 @@ export interface Transaction {
   merchant?: string;
   importedFrom?: string; // filename if imported
   isImported?: boolean;
+  runningBalance?: number;
 }
 
 export interface TransactionFilters {

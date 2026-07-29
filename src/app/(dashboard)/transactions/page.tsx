@@ -24,9 +24,9 @@ export default async function TransactionsPage() {
 
   if (userId) {
     const t1 = Date.now();
-    const { data } = await transactionRepository.findAll(userId);
+    const data = await transactionRepository.findAllUserTransactions(userId);
     const dbMs = Date.now() - t1;
-    console.log(`[profile] tx db findAll: ${dbMs}ms count=${data.length}`);
+    console.log(`[profile] tx db findAllUserTransactions: ${dbMs}ms count=${data.length}`);
     initialTransactions = data;
   }
 
