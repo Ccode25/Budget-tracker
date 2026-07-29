@@ -1,12 +1,16 @@
 {
+  "id": "/dashboard",
   "name": "BudgetTracker — Personal Finance",
   "short_name": "BudgetTracker",
   "description": "Modern personal finance and budget tracker.",
   "start_url": "/dashboard",
   "display": "standalone",
+  "display_override": ["standalone", "browser"],
   "background_color": "#1a1535",
   "theme_color": "#7c3aed",
   "orientation": "portrait",
+  "categories": ["finance", "productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
