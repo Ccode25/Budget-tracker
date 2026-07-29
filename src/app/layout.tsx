@@ -18,6 +18,12 @@ export const metadata: Metadata = {
   description:
     "A modern personal finance and budget tracker inspired by Revolut and Copilot Money. Track spending, set goals, and manage your budget with clarity.",
   keywords: ["budget", "finance", "tracker", "personal finance", "spending"],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "BudgetTracker",
+  },
 };
 
 export const viewport: Viewport = {
@@ -50,6 +56,19 @@ export default function RootLayout({
             <Toaster richColors position="top-right" />
           </ThemeProvider>
         </AuthSessionProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.log('ServiceWorker registration failed: ', err);
+                  });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
