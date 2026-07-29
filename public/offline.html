@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#7c3aed" />
+  <title>You're Offline — BudgetTracker</title>
+  <link rel="icon" href="/icon-192.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0e0b1e;
+      --surface:   #1a1535;
+      --border:    rgba(124, 58, 237, 0.25);
+      --primary:   #7c3aed;
+      --primary-h: #9f67f4;
+      --text:      #e2e0f0;
+      --muted:     #7b779e;
+      --success:   #10b981;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100dvh;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ── Animated orb ── */
+    .orb-wrapper {
+      position: relative;
+      width: 120px;
+      height: 120px;
+      margin-bottom: 2rem;
+    }
+    .orb {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, var(--primary-h), var(--primary));
+      box-shadow: 0 0 60px rgba(124,58,237,0.5);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    .orb-icon {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.8rem;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1);   box-shadow: 0 0 60px rgba(124,58,237,0.5); }
+      50%       { transform: scale(1.07); box-shadow: 0 0 90px rgba(124,58,237,0.7); }
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 1.25rem;
+      padding: 2.5rem 2rem;
+      max-width: 440px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.5rem;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+
+    /* ── Status pill ── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.75rem;
+    }
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: blink 1.2s step-start infinite;
+    }
+    .dot.online { background: var(--success); animation: none; }
+    @keyframes blink { 50% { opacity: 0; } }
+    .status-text { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── Buttons ── */
+    .btn-group { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.35rem;
+      border-radius: 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-h); transform: translateY(-1px); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: rgba(124,58,237,0.1); transform: translateY(-1px); }
+
+    /* ── Tips ── */
+    .tips {
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      text-align: left;
+    }
+    .tips h2 { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 0.75rem; }
+    .tips ul { list-style: none; }
+    .tips li { font-size: 0.85rem; color: var(--muted); padding: 0.3rem 0; display: flex; gap: 0.5rem; }
+    .tips li::before { content: '→'; color: var(--primary); flex-shrink: 0; }
+
+    /* ── Footer ── */
+    footer { margin-top: 2.5rem; font-size: 0.78rem; color: var(--muted); }
+    footer strong { color: var(--primary); }
+  </style>
+</head>
+<body>
+
+  <div class="orb-wrapper">
+    <div class="orb"></div>
+    <div class="orb-icon">💸</div>
+  </div>
+
+  <div class="card">
+    <div class="status-row">
+      <div class="dot" id="statusDot"></div>
+      <span class="status-text" id="statusText">No internet connection</span>
+    </div>
+
+    <h1>You're Offline</h1>
+    <p class="subtitle">
+      BudgetTracker couldn't reach the server. Your previously loaded pages
+      are still available — check your connection and try again.
+    </p>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="location.reload()">
+        ↻ &nbsp;Retry
+      </button>
+      <a href="/dashboard" class="btn btn-ghost">
+        ← &nbsp;Dashboard
+      </a>
+    </div>
+
+    <div class="tips">
+      <h2>While you wait…</h2>
+      <ul>
+        <li>Check your Wi-Fi or mobile data</li>
+        <li>Previously viewed pages are cached</li>
+        <li>Your data is safe — nothing is lost</li>
+        <li>Transactions sync automatically when back online</li>
+      </ul>
+    </div>
+  </div>
+
+  <footer>Powered by <strong>BudgetTracker</strong> · Works offline</footer>
+
+  <script>
+    function updateStatus() {
+      const dot  = document.getElementById('statusDot');
+      const text = document.getElementById('statusText');
+      if (navigator.onLine) {
+        dot.classList.add('online');
+        text.textContent = 'Back online — you can reload now';
+      } else {
+        dot.classList.remove('online');
+        text.textContent = 'No internet connection';
+      }
+    }
+    window.addEventListener('online',  updateStatus);
+    window.addEventListener('offline', updateStatus);
+    updateStatus();
+
+    // Auto-reload when back online
+    window.addEventListener('online', () => {
+      setTimeout(() => location.reload(), 1200);
+    });
+  </script>
+</body>
+</html>
