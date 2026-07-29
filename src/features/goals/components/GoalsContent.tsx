@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Container } from "@/components/layout/Container";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { SAVINGS_GOALS } from "@/features/analytics/mock/analytics";
-import { cn } from "@/lib/utils";
+import { cn, formatPHP } from "@/lib/utils";
 
 export interface GoalItem {
   id: string;
@@ -66,6 +66,12 @@ export function GoalsContent({
   const [modalOpen, setModalOpen] = useState(false);
   const [editingGoal, setEditingGoal] = useState<GoalItem | null>(null);
   const hasInitialGoals = initialGoals !== undefined;
+
+  useEffect(() => {
+    if (initialGoals) {
+      setGoals(initialGoals);
+    }
+  }, [initialGoals]);
 
   useEffect(() => {
     setMounted(true);
@@ -308,7 +314,7 @@ export function GoalsContent({
               <span className="text-xs font-medium uppercase tracking-wider">Total Target</span>
               <Target size={16} className="text-primary" />
             </div>
-            <p className="text-2xl font-bold text-foreground">₱{totalTarget.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-foreground">{formatPHP(totalTarget)}</p>
             <p className="text-xs text-muted-foreground">{displayGoals.length} total active targets</p>
           </div>
 
@@ -317,7 +323,7 @@ export function GoalsContent({
               <span className="text-xs font-medium uppercase tracking-wider">Total Saved</span>
               <PiggyBank size={16} className="text-emerald-500" />
             </div>
-            <p className="text-2xl font-bold text-foreground">₱{totalSaved.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-foreground">{formatPHP(totalSaved)}</p>
             <p className="text-xs text-emerald-600 font-medium">{overallPercentage}% of overall target</p>
           </div>
 
@@ -326,7 +332,7 @@ export function GoalsContent({
               <span className="text-xs font-medium uppercase tracking-wider">Remaining</span>
               <TrendingUp size={16} className="text-amber-500" />
             </div>
-            <p className="text-2xl font-bold text-foreground">₱{Math.max(0, totalTarget - totalSaved).toLocaleString()}</p>
+            <p className="text-2xl font-bold text-foreground">{formatPHP(Math.max(0, totalTarget - totalSaved))}</p>
             <p className="text-xs text-muted-foreground">To reach all financial goals</p>
           </div>
 
